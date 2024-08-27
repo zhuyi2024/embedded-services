@@ -3,15 +3,161 @@
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_imxrt;
+use embassy_sync::once_lock::OnceLock;
+
+mod activity_example {
+    use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+    use embassy_sync::signal::Signal;
+
+    use super::*;
+
+    pub mod backlight {
+
+        use embedded_services::activity;
+
+        use super::*;
+
+        // conceivably these actions could be permuted or extended based on whatever the "real" subscriber needs to do
+        enum Actions {
+            TurnOnBacklight,
+            TurnOffBacklight(bool),
+        }
+
+        pub struct BacklightContext {
+            activity_subscription: activity::Subscriber,
+            action_queue: Signal<NoopRawMutex, Actions>,
+        }
+
+        impl activity::ActivitySubscriber for BacklightContext {
+            fn activity_update(&self, notif: &activity::Notification) {
+                if matches!(notif.class, activity::Class::Keyboard) {
+                    // IPC wake
+                    //    Note: if depth is needed, use a channel instead
+                    self.action_queue.signal(match notif.state {
+                        activity::State::Active => Actions::TurnOnBacklight,
+                        activity::State::Inactive => Actions::TurnOffBacklight(true),
+                        activity::State::Disabled => Actions::TurnOffBacklight(false),
+                    });
+                }
+            }
+        }
+
+        impl BacklightContext {
+            pub fn new() -> Self {
+                Self {
+                    activity_subscription: activity::Subscriber::uninit(),
+                    action_queue: Signal::new(),
+                }
+            }
+
+            async fn init(&'static self) {
+                activity::register_subscriber(self, &self.activity_subscription)
+                    .await
+                    .unwrap();
+            }
+
+            async fn turn_on(&self) {
+                info!("Backlight enabled!");
+                embassy_time::Timer::after_millis(500).await;
+            }
+
+            async fn turn_off_immediate(&self) {
+                info!("Backlight off!");
+                embassy_time::Timer::after_millis(200).await;
+            }
+
+            async fn fade_off(&self) {
+                info!("Backlight fading off!");
+                embassy_time::Timer::after_millis(2000).await;
+            }
+
+            async fn event_loop(&self) {
+                loop {
+                    let event = self.action_queue.wait().await;
+
+                    match event {
+                        Actions::TurnOnBacklight => self.turn_on().await,
+                        Actions::TurnOffBacklight(fade) => {
+                            if fade {
+                                self.fade_off().await;
+                            } else {
+                                self.turn_off_immediate().await;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        #[embassy_executor::task]
+        pub async fn task() {
+            static CONTEXT: OnceLock<BacklightContext> = OnceLock::new();
+            let context = CONTEXT.get_or_init(BacklightContext::new);
+            context.init().await;
+            context.event_loop().await;
+        }
+    }
+
+    pub mod publisher {
+        use super::*;
+
+        struct Keyboard {
+            activity_publisher: embedded_services::activity::Publisher,
+        }
+
+        #[embassy_executor::task]
+        pub async fn keyboard_task() {
+            static KEYBOARD: OnceLock<Keyboard> = OnceLock::new();
+
+            let keyboard = KEYBOARD.get_or_init(|| {
+                embassy_futures::block_on(async {
+                    Keyboard {
+                        activity_publisher: embedded_services::activity::register_publisher(
+                            embedded_services::activity::Class::Keyboard,
+                        )
+                        .await
+                        .unwrap(),
+                    }
+                })
+            });
+
+            let mut count = 0;
+            loop {
+                let some_times = [10, 100, 1000, 2000, 5000];
+
+                embassy_time::Timer::after_millis(some_times[count % some_times.len()]).await;
+
+                let state = match count % 3 {
+                    1 => embedded_services::activity::State::Active,
+                    2 => embedded_services::activity::State::Inactive,
+                    _ => embedded_services::activity::State::Disabled,
+                };
+
+                keyboard.activity_publisher.publish(state).await;
+
+                count += 1;
+            }
+        }
+    }
+}
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     let _p = embassy_imxrt::init(Default::default());
 
     info!("Platform initialization complete ...");
 
-    loop {
-        embedded_services_examples::delay(10_000_000);
-    }
+    embedded_services::init().await;
+
+    info!("Service initialization complete...");
+
+    // create an activity service subscriber
+    spawner.spawn(activity_example::backlight::task()).unwrap();
+
+    // create an activity service publisher
+    spawner.spawn(activity_example::publisher::keyboard_task()).unwrap();
+
+    info!("Subsystem initialization complete...");
+
+    embedded_services_examples::delay(1_000);
 }
