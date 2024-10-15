@@ -1,0 +1,163 @@
+#![no_std]
+#![no_main]
+
+use defmt::info;
+use embassy_executor::Spawner;
+
+mod simple_example {
+    use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+    use embassy_sync::once_lock::OnceLock;
+    use embassy_sync::signal::Signal;
+    use embedded_services::transport;
+
+    use super::*;
+
+    #[derive(Copy, Clone, Debug, defmt::Format)]
+    enum Key {
+        Sender,
+        Receiver,
+    }
+
+    impl From<Key> for transport::OemKey {
+        fn from(value: Key) -> Self {
+            match value {
+                Key::Sender => 0,
+                Key::Receiver => 1,
+            }
+        }
+    }
+
+    impl From<Key> for transport::Internal {
+        fn from(value: Key) -> Self {
+            transport::Internal::Oem(value.into())
+        }
+    }
+
+    impl From<Key> for transport::Endpoint {
+        fn from(value: Key) -> Self {
+            transport::Endpoint::Internal(value.into())
+        }
+    }
+
+    #[derive(Copy, Clone, Debug, defmt::Format)]
+    enum Signals {
+        Command,
+        Request,
+        Response,
+        Notification,
+    }
+
+    struct Context {
+        tp: transport::EndpointLink,
+        sn: Signal<NoopRawMutex, Signals>,
+    }
+
+    impl Context {
+        fn new(key: Key) -> Self {
+            Self {
+                tp: transport::EndpointLink::uninit(key.into()),
+                sn: Signal::new(),
+            }
+        }
+    }
+
+    impl transport::MessageDelegate for Context {
+        fn process(&self, message: &transport::Message) {
+            if let Some(sig) = message.data.get::<Signals>() {
+                self.sn.signal(*sig);
+            }
+        }
+    }
+
+    #[embassy_executor::task]
+    pub async fn sender() {
+        static SENDER: OnceLock<Context> = OnceLock::new();
+        let this = SENDER.get_or_init(|| Context::new(Key::Sender));
+
+        // register sender transport node
+        transport::register_endpoint(this, &this.tp).await.unwrap();
+
+        // wait for a second
+        embassy_time::Timer::after_secs(1).await;
+
+        // send command to receiver
+        this.tp.send(Key::Receiver.into(), &Signals::Command).await.unwrap();
+
+        loop {
+            let sig = this.sn.wait().await;
+
+            match sig {
+                Signals::Command => info!("Sender: Unexpected command received!"),
+                Signals::Notification => {
+                    info!("Sender: received notification!");
+                    embassy_time::Timer::after_secs(2).await;
+
+                    info!("Sender: requesting receiver!");
+                    this.tp.send(Key::Receiver.into(), &Signals::Request).await.unwrap();
+                }
+                Signals::Request => info!("Sender: Unexpected request received!"),
+                Signals::Response => {
+                    info!("Sender: got response!");
+                    embassy_time::Timer::after_secs(2).await;
+
+                    info!("Sender: commanding receiver!");
+                    this.tp.send(Key::Receiver.into(), &Signals::Command).await.unwrap();
+                }
+            }
+        }
+    }
+
+    #[embassy_executor::task]
+    pub async fn receiver() {
+        static RECEIVER: OnceLock<Context> = OnceLock::new();
+        let this = RECEIVER.get_or_init(|| Context::new(Key::Receiver));
+
+        transport::register_endpoint(this, &this.tp).await.unwrap();
+
+        loop {
+            let sig = this.sn.wait().await;
+
+            match sig {
+                Signals::Command => {
+                    info!("Receiver: Got command!");
+                    embassy_time::Timer::after_secs(2).await;
+
+                    info!("Receiver: Sending notification!");
+                    this.tp.send(Key::Sender.into(), &Signals::Notification).await.unwrap();
+                }
+                Signals::Request => {
+                    info!("Receiver: Got Request!");
+                    embassy_time::Timer::after_secs(2).await;
+
+                    info!("Receiver: Sending reply!");
+                    this.tp.send(Key::Sender.into(), &Signals::Response).await.unwrap();
+                }
+                Signals::Notification => info!("Receiver: Unexpected notification!"),
+                Signals::Response => info!("Receiver: unexpected response!"),
+            }
+        }
+    }
+}
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    let _p = embassy_imxrt::init(Default::default());
+
+    info!("Platform initialization complete ...");
+
+    embedded_services::init().await;
+
+    info!("Service initialization complete...");
+
+    spawner.spawn(simple_example::receiver()).unwrap();
+    spawner.spawn(simple_example::sender()).unwrap();
+
+    info!("Subsystem initialization complete...");
+
+    embedded_services_examples::delay(1_000);
+
+    loop {
+        embassy_time::Timer::after_secs(10).await;
+        info!("10s elapsed...");
+    }
+}

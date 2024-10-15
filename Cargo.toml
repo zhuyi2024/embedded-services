@@ -27,6 +27,9 @@ embedded-storage-async = { version = "0.4.1" }
 rand_core = "0.6.4"
 fixed = "1.23.1"
 
+postcard = "1.*"
+serde = { version = "1.0.*", default-features = false }
+
 embedded-hal-02 = { package = "embedded-hal", version = "0.2.6", features = [
     "unproven",
 ] }
