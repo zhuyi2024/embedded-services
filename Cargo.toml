@@ -5,12 +5,12 @@ edition = "2021"
 license = "MIT"
 description = "Embedded Service Layer for IPC, Feature Customization and Extension in Embedded Devices."
 repository = "https://github.com/pop-project/embedded-services"
-rust-version = "1.71"
+rust-version = "1.79"
 
 [dependencies]
 embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
 embassy-time-driver = { git = "https://github.com/embassy-rs/embassy", optional = true }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", optional = true }
+embassy-time = { git = "https://github.com/embassy-rs/embassy" }
 embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
 embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
 

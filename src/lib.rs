@@ -8,10 +8,12 @@ pub use intrusive_list::*;
 
 /// short-hand include all pre-baked services
 pub mod activity;
+pub mod power_button;
 pub mod transport;
 
 /// initialize all service static interfaces as required. Ideally, this is done before subsystem initialization
 pub async fn init() {
+    // power_button::init();
     transport::init();
     activity::init();
 }
