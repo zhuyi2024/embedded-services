@@ -1,5 +1,6 @@
 //! Button Interpreter Module
 
+use embassy_time::Duration;
 use embedded_hal_1::digital::InputPin;
 use embedded_hal_async::digital::Wait;
 
@@ -19,14 +20,20 @@ pub enum Message {
 }
 
 /// Checks the button press duration and returns the corresponding state.
-pub async fn check_button_press<I: InputPin + Wait>(button: &mut Button<I>) -> Message {
-    let duration = button.get_press_duration().await;
-    match duration {
-        Some(duration) => match duration.as_millis() {
-            0..=2000 => Message::ShortPress,
-            2001..=5000 => Message::LongPress,
-            5001.. => Message::PressAndHold,
-        },
-        _ => Message::Ignore,
+pub async fn check_button_press<I: InputPin + Wait>(button: &mut Button<I>, timeout: Duration) -> Message {
+    if let Some(duration) = button.get_press_duration(timeout).await {
+        // Handle timeout case
+        if duration.as_millis() >= timeout.as_millis() {
+            return Message::PressAndHold;
+        }
+
+        // Handle other button press durations
+        match duration.as_millis() {
+            0..=1999 => Message::ShortPress,
+            2000.. => Message::LongPress,
+        }
+    } else {
+        // Ignore button release which timed out
+        Message::Ignore
     }
 }

@@ -1,13 +1,13 @@
 //! Button Service Definitions
 
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{with_timeout, Duration, Instant, TimeoutError, Timer};
 use embedded_hal_1::digital::InputPin;
 use embedded_hal_async::digital::Wait;
 
 use crate::debounce::Debouncer;
 
 #[derive(Debug)]
-/// A struct representing a button with a generic GPIO pin.
+/// A struct representing a button with a generic GPIO pin and a debouncer.
 pub struct Button<I> {
     gpio: I,
     debouncer: Debouncer,
@@ -37,14 +37,11 @@ impl<I: InputPin + Wait> Button<I> {
     }
 
     /// Asynchronously gets the duration for which the button was pressed.
-    pub async fn get_press_duration(&mut self) -> Option<Duration> {
+    pub async fn get_press_duration(&mut self, timeout: Duration) -> Option<Duration> {
         // Wait for the button to be pressed
         if let ButtonState::ButtonPressed(_) = self.get_button_state().await {
             // Record the timestamp when the button is pressed
             let start = Instant::now();
-
-            // Define a timeout for the button press
-            let timeout = Duration::from_secs(5);
 
             let release_future = async {
                 while let ButtonState::ButtonPressed(_) = self.get_button_state().await {
@@ -53,16 +50,13 @@ impl<I: InputPin + Wait> Button<I> {
                 Instant::now()
             };
 
-            let end = embassy_futures::select::select(release_future, Timer::after(timeout)).await;
+            // Wait for the button to be released or timeout
+            let end = with_timeout(timeout, release_future).await;
 
-            match end {
-                embassy_futures::select::Either::First(end) => {
-                    return Some(end - start);
-                }
-                embassy_futures::select::Either::Second(_) => {
-                    return Some(Instant::now() - start);
-                }
-            }
+            return Some(match end {
+                Ok(end) => end - start,
+                Err(TimeoutError) => Instant::now() - start,
+            });
         }
 
         None
