@@ -53,19 +53,13 @@ impl Debouncer {
                 self.integrator -= 1;
             }
 
-            // Check if the integrator has crossed the threshold
-            if self.integrator >= self.threshold {
-                // Check if the button state has changed
-                if !self.pressed {
-                    self.pressed = true;
-                    return true;
-                }
-            } else if self.integrator == 0 {
-                // Check if integrator has reached 0 and the button state has changed
-                if self.pressed {
-                    self.pressed = false;
-                    return false;
-                }
+            // Check if the integrator has crossed the threshold and the button state has changed
+            if self.integrator >= self.threshold && !self.pressed {
+                self.pressed = true;
+                return true;
+            } else if self.integrator == 0 && self.pressed {
+                self.pressed = false;
+                return false;
             }
 
             // Wait for the next sample interval
