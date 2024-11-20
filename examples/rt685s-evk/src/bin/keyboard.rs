@@ -99,10 +99,12 @@ mod activity_example {
     }
 
     pub mod publisher {
+        use embedded_services::activity;
+
         use super::*;
 
         struct Keyboard {
-            activity_publisher: embedded_services::activity::Publisher,
+            activity_publisher: activity::Publisher,
         }
 
         #[embassy_executor::task]
@@ -112,11 +114,7 @@ mod activity_example {
             let keyboard = KEYBOARD.get_or_init(|| {
                 embassy_futures::block_on(async {
                     Keyboard {
-                        activity_publisher: embedded_services::activity::register_publisher(
-                            embedded_services::activity::Class::Keyboard,
-                        )
-                        .await
-                        .unwrap(),
+                        activity_publisher: activity::register_publisher(activity::Class::Keyboard).await.unwrap(),
                     }
                 })
             });
@@ -128,9 +126,9 @@ mod activity_example {
                 embassy_time::Timer::after_millis(some_times[count % some_times.len()]).await;
 
                 let state = match count % 3 {
-                    1 => embedded_services::activity::State::Active,
-                    2 => embedded_services::activity::State::Inactive,
-                    _ => embedded_services::activity::State::Disabled,
+                    1 => activity::State::Active,
+                    2 => activity::State::Inactive,
+                    _ => activity::State::Disabled,
                 };
 
                 keyboard.activity_publisher.publish(state).await;

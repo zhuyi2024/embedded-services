@@ -18,6 +18,7 @@ jobs:
     strategy:
       matrix:
         target: [thumbv8m.main-none-eabihf]
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,3 +29,4 @@ jobs:
         run: rustup target add ${{ matrix.target }}
       - name: cargo check
         run: cargo check --target ${{ matrix.target }} --no-default-features
+        working-directory: ${{ matrix.workdir }}
