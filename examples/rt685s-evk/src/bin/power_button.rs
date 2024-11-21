@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate embedded_services_examples;
+
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_imxrt::gpio::{self, Input, Inverter, Pull};

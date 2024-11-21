@@ -19,9 +19,3 @@ static BOOT_IMAGE_VERSION: u32 = 0x01000000;
 #[link_section = ".keystore"]
 #[used]
 static KEYSTORE: [u8; 2048] = [0; 2048];
-
-pub fn delay(cycles: usize) {
-    for _ in 0..cycles {
-        cortex_m::asm::nop();
-    }
-}

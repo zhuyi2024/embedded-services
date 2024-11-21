@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate embedded_services_examples;
+
 use defmt::info;
 use embassy_executor::Spawner;
 
@@ -154,7 +156,7 @@ async fn main(spawner: Spawner) {
 
     info!("Subsystem initialization complete...");
 
-    embedded_services_examples::delay(1_000);
+    embassy_time::Timer::after_secs(1).await;
 
     loop {
         embassy_time::Timer::after_secs(10).await;
