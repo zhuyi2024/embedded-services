@@ -37,6 +37,7 @@ embassy-time = { git = "https://github.com/embassy-rs/embassy", features = [
 futures = { version = "0.3.30", default-features = false, features = [
     "async-await",
 ] }
+mimxrt600-fcb = "0.1.0"
 mimxrt685s-pac = { version = "*", features = ["rt", "critical-section"] }
 
 embedded-services = { path = "../../embedded-service", features = ["defmt"] }
