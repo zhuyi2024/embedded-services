@@ -59,6 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,6 +71,7 @@ jobs:
           components: rustfmt
       - name: cargo fmt --check
         run: cargo fmt --check
+        working-directory: ${{ matrix.workdir }}
 
   clippy:
     runs-on: ubuntu-latest
@@ -84,6 +86,7 @@ jobs:
         # Get early warning of new lints which are regularly introduced in beta channels.
         toolchain: [stable, beta]
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -99,6 +102,7 @@ jobs:
         with:
           reporter: 'github-pr-check'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ${{ matrix.workdir }}
 
   # Enable once we have a released crate
   # semver:
@@ -132,6 +136,7 @@ jobs:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,6 +148,7 @@ jobs:
         run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: --cfg docsrs
+        working-directory: ${{ matrix.workdir }}
 
   hack:
     # cargo-hack checks combinations of feature flags to ensure that features are all additive
@@ -154,6 +160,7 @@ jobs:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -167,6 +174,7 @@ jobs:
       # --feature-powerset runs for every combination of features
       - name: cargo hack
         run: cargo hack --feature-powerset check
+        working-directory: ${{ matrix.workdir }}
 
   deny:
     # cargo-deny checks licenses, advisories, sources, and bans for
@@ -178,6 +186,7 @@ jobs:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -189,7 +198,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           log-level: warn
-          manifest-path: ./Cargo.toml
+          manifest-path: ${{ matrix.workdir }}/Cargo.toml
           command: check
           arguments: --all-features
 
@@ -203,6 +212,7 @@ jobs:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
+        workdir: [ "embedded-service", "power-button-service"]
         msrv: ["1.79"] # We're relying on namespaced-features, which
                        # was released in 1.60
                        #
@@ -220,3 +230,4 @@ jobs:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
         run: cargo check
+        working-directory: ${{ matrix.workdir }}

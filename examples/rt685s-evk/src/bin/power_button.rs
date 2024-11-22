@@ -1,15 +1,17 @@
 #![no_std]
 #![no_main]
 
+extern crate embedded_services_examples;
+
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_imxrt::gpio::{self, Input, Inverter, Pull};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::pubsub::{PubSubChannel, Publisher};
 use embassy_time::Duration;
-use embedded_services::power_button::button::{Button, ButtonConfig};
-use embedded_services::power_button::button_interpreter::{check_button_press, Message};
-use embedded_services::power_button::debounce::{ActiveState, Debouncer};
+use power_button_service::button::{Button, ButtonConfig};
+use power_button_service::button_interpreter::{check_button_press, Message};
+use power_button_service::debounce::{ActiveState, Debouncer};
 use {defmt_rtt as _, panic_probe as _};
 
 /// Create a message bus.
