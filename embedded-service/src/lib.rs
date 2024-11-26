@@ -9,6 +9,7 @@ pub use intrusive_list::*;
 /// short-hand include all pre-baked services
 pub mod activity;
 pub mod buffer;
+pub mod fmt;
 pub mod transport;
 
 /// initialize all service static interfaces as required. Ideally, this is done before subsystem initialization
