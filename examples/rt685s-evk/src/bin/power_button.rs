@@ -7,37 +7,93 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_imxrt::gpio::{self, Input, Inverter, Pull};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::pubsub::{PubSubChannel, Publisher};
+use embassy_sync::once_lock::OnceLock;
+use embassy_sync::signal::Signal;
 use embassy_time::Duration;
+use embedded_services::transport::{self, Endpoint, Internal};
 use power_button_service::button::{Button, ButtonConfig};
 use power_button_service::button_interpreter::{check_button_press, Message};
 use power_button_service::debounce::{ActiveState, Debouncer};
 use {defmt_rtt as _, panic_probe as _};
 
-/// Create a message bus.
-static MESSAGE_BUS: PubSubChannel<ThreadModeRawMutex, Message, 4, 4, 4> = PubSubChannel::new();
+mod sender {
+    use super::*;
+
+    pub struct Sender {
+        pub tp: transport::EndpointLink,
+        sn: Signal<ThreadModeRawMutex, Message>,
+    }
+
+    impl Sender {
+        pub fn new() -> Self {
+            Self {
+                tp: transport::EndpointLink::uninit(Endpoint::Internal(Internal::Power)),
+                sn: Signal::new(),
+            }
+        }
+
+        pub async fn send(&self, message: Message) {
+            self.tp
+                .send(Endpoint::Internal(Internal::Power), &message)
+                .await
+                .unwrap();
+        }
+    }
+
+    impl<'a> transport::MessageDelegate for Sender {
+        fn process(&self, message: &transport::Message) {
+            if let Some(sig) = message.data.get::<Message>() {
+                self.sn.signal(*sig);
+            }
+        }
+    }
+}
+
+mod receiver {
+    use super::*;
+
+    pub struct Receiver {
+        pub tp: transport::EndpointLink,
+        pub sn: Signal<ThreadModeRawMutex, Message>,
+    }
+
+    impl Receiver {
+        pub fn new() -> Self {
+            Self {
+                tp: transport::EndpointLink::uninit(Endpoint::Internal(Internal::Power)),
+                sn: Signal::new(),
+            }
+        }
+    }
+
+    impl transport::MessageDelegate for Receiver {
+        fn process(&self, message: &transport::Message) {
+            if let Some(sig) = message.data.get::<Message>() {
+                self.sn.signal(*sig);
+            }
+        }
+    }
+}
 
 #[embassy_executor::task(pool_size = 4)]
-async fn button_task(
-    gpio: Input<'static>,
-    config: ButtonConfig,
-    publisher: Publisher<'static, ThreadModeRawMutex, Message, 4, 4, 4>,
-) {
+async fn button_task(gpio: Input<'static>, config: ButtonConfig) {
+    static SENDER: OnceLock<sender::Sender> = OnceLock::new();
+    let sender = SENDER.get_or_init(|| sender::Sender::new());
     let mut button = Button::new(gpio, config);
 
     loop {
         match check_button_press(&mut button).await {
             Some(Message::ShortPress) => {
                 info!("Short press");
-                publisher.publish(Message::ShortPress).await;
+                sender.send(Message::ShortPress).await;
             }
             Some(Message::LongPress) => {
                 info!("Long press");
-                publisher.publish(Message::LongPress).await;
+                sender.send(Message::LongPress).await;
             }
             Some(Message::PressAndHold) => {
                 info!("Press and hold");
-                publisher.publish(Message::PressAndHold).await;
+                sender.send(Message::PressAndHold).await;
             }
             None => {}
         }
@@ -46,6 +102,8 @@ async fn button_task(
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
+    embedded_services::init().await;
+
     let p = embassy_imxrt::init(Default::default());
 
     unsafe { gpio::init() };
@@ -63,8 +121,13 @@ async fn main(spawner: Spawner) {
     let config_b = ButtonConfig::default();
 
     // Spawn the button tasks
-    spawner.must_spawn(button_task(button_a, config_a, MESSAGE_BUS.publisher().unwrap()));
-    spawner.must_spawn(button_task(button_b, config_b, MESSAGE_BUS.publisher().unwrap()));
+    spawner.must_spawn(button_task(button_a, config_a));
+    spawner.must_spawn(button_task(button_b, config_b));
+
+    static RECEIVER: OnceLock<receiver::Receiver> = OnceLock::new();
+    let receiver = RECEIVER.get_or_init(receiver::Receiver::new);
+
+    transport::register_endpoint(receiver, &receiver.tp).await.unwrap();
 
     // Create an LED instance
     let mut led_r = gpio::Output::new(
@@ -93,10 +156,8 @@ async fn main(spawner: Spawner) {
         gpio::SlewRate::Standard,
     );
 
-    let mut subscriber = MESSAGE_BUS.subscriber().unwrap();
-
     loop {
-        let msg = subscriber.next_message_pure().await;
+        let msg = receiver.sn.wait().await;
 
         // Toggle the LEDs based on the button press duration
         match msg {
