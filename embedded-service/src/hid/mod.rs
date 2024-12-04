@@ -10,6 +10,9 @@ use crate::buffer::SharedRef;
 use crate::transport::{self, Endpoint, EndpointLink, External, Internal, MessageDelegate};
 use crate::{error, intrusive_list, IntrusiveList, Node, NodeContainer};
 
+mod command;
+pub use command::*;
+
 /// HID descriptor length
 pub const DESCRIPTOR_LEN: usize = 30;
 
@@ -21,6 +24,14 @@ pub enum Error {
     InvalidData,
     /// Invalid size
     InvalidSize,
+    /// Command requires a report ID
+    RequiresReportId,
+    /// Command requires data
+    RequiresData,
+    /// Invalid report type for command
+    InvalidReportType,
+    /// Invalid report frequency
+    InvalidReportFreq,
 }
 
 /// HID descriptor, see spec for descriptions
@@ -221,6 +232,8 @@ pub enum Request<'a> {
     InputReport,
     /// Output report request
     OutputReport(Option<ReportId>, SharedRef<'a, u8>),
+    /// Command
+    Command(Command<'a>),
 }
 
 /// Device to host messages
@@ -234,6 +247,8 @@ pub enum Response<'a> {
     InputReport(SharedRef<'a, u8>),
     /// Feature report
     FeatureReport(SharedRef<'a, u8>),
+    /// General command responses
+    Command(CommandResponse),
 }
 
 /// HID message data
