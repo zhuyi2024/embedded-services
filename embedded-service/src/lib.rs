@@ -10,10 +10,12 @@ pub use intrusive_list::*;
 pub mod activity;
 pub mod buffer;
 pub mod fmt;
+pub mod hid;
 pub mod transport;
 
 /// initialize all service static interfaces as required. Ideally, this is done before subsystem initialization
 pub async fn init() {
     transport::init();
     activity::init();
+    hid::init();
 }
