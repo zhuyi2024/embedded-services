@@ -73,6 +73,26 @@ impl<
         Ok(self.buffer.reference().slice(0..len))
     }
 
+    pub async fn read_report_descriptor(
+        &self,
+        bus: &mut impl I2c<A, Error = E>,
+    ) -> Result<SharedRef<'static, u8>, Error> {
+        info!("Sending report descriptor");
+
+        let mut borrow = self.buffer.borrow_mut();
+        let buf: &mut [u8] = borrow.borrow_mut();
+        let desc = self.get_hid_descriptor(bus).await?;
+        let reg = desc.w_report_desc_register.to_le_bytes();
+        let len = desc.w_report_desc_length as usize;
+
+        if let Err(e) = bus.write_read(self.address, &reg, &mut buf[0..len]).await {
+            error!("Failed to read report descriptor: {:#?}", e);
+            return Err(Error::Bus);
+        }
+
+        Ok(self.buffer.reference().slice(0..len))
+    }
+
     pub async fn process_request(&self, bus: &mut impl I2c<A, Error = E>) -> Result<(), Error> {
         let req = self.device.wait_request().await;
 
@@ -80,6 +100,10 @@ impl<
             hid::Request::Descriptor => {
                 let desc = self.read_hid_descriptor(bus).await?;
                 Some(hid::Response::Descriptor(desc))
+            }
+            hid::Request::ReportDescriptor => {
+                let desc = self.read_report_descriptor(bus).await?;
+                Some(hid::Response::ReportDescriptor(desc))
             }
             _ => unimplemented!(),
         };
