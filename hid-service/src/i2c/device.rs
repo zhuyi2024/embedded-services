@@ -93,6 +93,22 @@ impl<
         Ok(self.buffer.reference().slice(0..len))
     }
 
+    pub async fn handle_input_report(&self, bus: &mut impl I2c<A, Error = E>) -> Result<SharedRef<'static, u8>, Error> {
+        info!("Handling input report");
+        let desc = self.get_hid_descriptor(bus).await?;
+
+        let mut borrow = self.buffer.borrow_mut();
+        let buf: &mut [u8] = borrow.borrow_mut();
+        let buf = &mut buf[0..desc.w_max_input_length as usize];
+
+        if let Err(e) = bus.read(self.address, buf).await {
+            error!("Failed to read input report: {:#?}", e);
+            return Err(Error::Bus);
+        }
+
+        Ok(self.buffer.reference().slice(0..desc.w_max_input_length as usize))
+    }
+
     pub async fn process_request(&self, bus: &mut impl I2c<A, Error = E>) -> Result<(), Error> {
         let req = self.device.wait_request().await;
 
@@ -104,6 +120,10 @@ impl<
             hid::Request::ReportDescriptor => {
                 let desc = self.read_report_descriptor(bus).await?;
                 Some(hid::Response::ReportDescriptor(desc))
+            }
+            hid::Request::InputReport => {
+                let report = self.handle_input_report(bus).await?;
+                Some(hid::Response::InputReport(report))
             }
             _ => unimplemented!(),
         };
