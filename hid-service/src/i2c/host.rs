@@ -1,17 +1,16 @@
 //! I2C<->HID bridge
-use core::borrow::Borrow;
+use core::borrow::{Borrow, BorrowMut};
+
+use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_sync::signal::Signal;
+use embassy_time::{with_timeout, Duration};
+use embedded_services::buffer::OwnedRef;
+use embedded_services::hid::{self, CommandOpcode, DeviceId};
+use embedded_services::transport::{self, Endpoint, EndpointLink, External, MessageDelegate};
+use embedded_services::{error, trace};
 
 use super::{Command as I2cCommand, I2cSlaveAsync};
 use crate::Error;
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, signal::Signal};
-use embassy_time::{with_timeout, Duration};
-use embedded_services::buffer::OwnedRef;
-use embedded_services::{
-    error,
-    hid::{self, DeviceId},
-    trace,
-    transport::{self, Endpoint, EndpointLink, External, MessageDelegate},
-};
 
 const DEVICE_RESPONSE_TIMEOUT_MS: u64 = 200;
 const DATA_READ_TIMEOUT_MS: u64 = 50;
@@ -26,7 +25,7 @@ pub struct Host {
     id: DeviceId,
     pub tp: EndpointLink,
     response: Signal<NoopRawMutex, Option<hid::Response<'static>>>,
-    _buffer: OwnedRef<'static, u8>,
+    buffer: OwnedRef<'static, u8>,
 }
 
 impl Host {
@@ -35,7 +34,7 @@ impl Host {
             id,
             tp: EndpointLink::uninit(Endpoint::External(External::Host)),
             response: Signal::new(),
-            _buffer: buffer,
+            buffer,
         }
     }
 
@@ -72,6 +71,89 @@ impl Host {
         Ok(())
     }
 
+    async fn process_command(
+        &self,
+        bus: &mut impl I2cSlaveAsync,
+        device: &hid::Device,
+    ) -> Result<hid::Command<'static>, Error> {
+        trace!("Waiting for command");
+        let mut cmd = [0u8; 2];
+        self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut cmd).await?;
+
+        let cmd = u16::from_le_bytes(cmd);
+        let opcode = CommandOpcode::try_from(cmd);
+        if opcode.is_err() {
+            error!("Invalid command {:#x}", cmd);
+            return Err(Error::InvalidCommand);
+        }
+
+        trace!("Command {:#x}", cmd);
+        // Get report ID
+        let opcode = opcode.unwrap();
+        trace!("Opcode {:?}", opcode);
+        let report_id = if opcode.requires_report_id() {
+            // See if we need to read another byte for the full report ID
+            if hid::ReportId::has_extended_report_id(cmd) {
+                trace!("Reading extended report ID");
+                let mut report_id = [0u8; 1];
+                self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut report_id).await?;
+
+                Some(hid::ReportId(report_id[0]))
+            } else {
+                Some(hid::ReportId::from_command(cmd))
+            }
+        } else {
+            None
+        };
+
+        // Read data from host through data register
+        let buffer = if opcode.requires_host_data() || opcode.has_response() {
+            let mut addr = [0u8; 2];
+            // If the command has a response then we only needed to consume the data register address
+            trace!("Waiting for host data access");
+            self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut addr).await?;
+
+            let reg = u16::from_le_bytes(addr);
+            if reg != device.regs.data_reg {
+                error!("Invalid data register {:#x}", reg);
+                return Err(Error::InvalidAddress);
+            }
+
+            if opcode.requires_host_data() {
+                trace!("Waiting for data");
+                let mut borrow = self.buffer.borrow_mut();
+                let buffer: &mut [u8] = borrow.borrow_mut();
+
+                self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut buffer[0..2]).await?;
+
+                let length = u16::from_le_bytes([buffer[0], buffer[1]]);
+                if buffer.len() < length as usize {
+                    error!("Buffer overrun: {}", length);
+                    return Err(Error::InvalidSize);
+                }
+
+                trace!("Reading {} bytes", length);
+                self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut buffer[2..length as usize])
+                    .await?;
+                Some(self.buffer.reference().slice(2..length as usize))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Create command
+        let report_type = hid::ReportType::try_from(cmd).ok();
+        let command = hid::Command::new(cmd, opcode, report_type, report_id, buffer);
+        if let Err(e) = command {
+            error!("Invalid command {:?}", e);
+            return Err(Error::InvalidCommand);
+        }
+
+        Ok(command.unwrap())
+    }
+
     /// Handle an access to a specific register
     async fn process_register_access(&self, bus: &mut impl I2cSlaveAsync) -> Result<(), Error> {
         let mut reg = [0u8; 2];
@@ -87,6 +169,8 @@ impl Host {
                 hid::Request::ReportDescriptor
             } else if reg == device.regs.input_reg {
                 hid::Request::InputReport
+            } else if reg == device.regs.command_reg {
+                hid::Request::Command(self.process_command(bus, device).await?)
             } else {
                 error!("Unexpected request address {:#x}", reg);
                 return Err(Error::InvalidAddress);
@@ -145,7 +229,7 @@ impl Host {
                 hid::Response::ReportDescriptor(_) => trace!("Sending report descriptor"),
                 hid::Response::InputReport(_) => trace!("Sending input report"),
                 hid::Response::FeatureReport(_) => trace!("Sending feature report"),
-                _ => trace!("Other response"),
+                hid::Response::Command(_) => trace!("Sending command"),
             }
 
             // Wait for the read from the host
@@ -171,7 +255,21 @@ impl Host {
                     let bytes = data.borrow();
                     self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, bytes.borrow()).await
                 }
-                _ => unimplemented!(),
+                hid::Response::Command(cmd) => match cmd {
+                    hid::CommandResponse::GetIdle(freq) => {
+                        let freq: u16 = freq.into();
+                        let mut buffer = [0u8; 2];
+                        buffer.copy_from_slice(freq.to_le_bytes().as_slice());
+                        self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, &buffer).await
+                    }
+                    hid::CommandResponse::GetProtocol(protocol) => {
+                        let protocol: u16 = protocol.into();
+                        let mut buffer = [0u8; 2];
+                        buffer.copy_from_slice(protocol.to_le_bytes().as_slice());
+                        self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, &buffer).await
+                    }
+                    hid::CommandResponse::Vendor => Ok(()),
+                },
             };
 
             result
