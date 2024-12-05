@@ -83,6 +83,8 @@ impl Host {
         if let Some(device) = hid::get_device(self.id).await {
             let request = if reg == device.regs.hid_desc_reg {
                 hid::Request::Descriptor
+            } else if reg == device.regs.report_desc_reg {
+                hid::Request::ReportDescriptor
             } else {
                 error!("Unexpected request address {:#x}", reg);
                 return Err(Error::InvalidAddress);
@@ -131,6 +133,7 @@ impl Host {
         if let Some(response) = self.response.wait().await {
             match response {
                 hid::Response::Descriptor(_) => trace!("Sending descriptor"),
+                hid::Response::ReportDescriptor(_) => trace!("Sending report descriptor"),
                 _ => trace!("Other response"),
             }
 
@@ -150,7 +153,7 @@ impl Host {
             }
 
             let result = match response {
-                hid::Response::Descriptor(data) => {
+                hid::Response::Descriptor(data) | hid::Response::ReportDescriptor(data) => {
                     let bytes = data.borrow();
                     self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, bytes.borrow()).await
                 }
