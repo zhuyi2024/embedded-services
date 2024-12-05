@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 
 use embedded_hal_async::i2c::{AddressMode, I2c};
 use embedded_services::buffer::*;
-use embedded_services::hid::DeviceContainer;
+use embedded_services::hid::{DeviceContainer, Response};
 use embedded_services::{error, hid, info, trace};
 
 use crate::Error;
@@ -109,6 +109,40 @@ impl<
         Ok(self.buffer.reference().slice(0..desc.w_max_input_length as usize))
     }
 
+    pub async fn handle_command(
+        &self,
+        bus: &mut impl I2c<A, Error = E>,
+        cmd: &hid::Command<'static>,
+    ) -> Result<Option<Response<'static>>, Error> {
+        info!("Handling command");
+
+        let mut borrow = self.buffer.borrow_mut();
+        let buf: &mut [u8] = borrow.borrow_mut();
+
+        let len = cmd
+            .encode_into_slice(
+                buf,
+                Some(self.device.regs.command_reg),
+                if cmd.opcode().has_response() || cmd.opcode().requires_host_data() {
+                    Some(self.device.regs.data_reg)
+                } else {
+                    None
+                },
+            )
+            .map_err(|_| Error::Deserialize)?;
+
+        bus.write(self.address, &buf[..len]).await.map_err(|_| Error::Bus)?;
+
+        if cmd.opcode().has_response() {
+            trace!("Reading response");
+            bus.read(self.address, buf).await.map_err(|_| Error::Bus)?;
+
+            return Ok(Some(Response::FeatureReport(self.buffer.reference())));
+        }
+
+        Ok(None)
+    }
+
     pub async fn process_request(&self, bus: &mut impl I2c<A, Error = E>) -> Result<(), Error> {
         let req = self.device.wait_request().await;
 
@@ -125,6 +159,7 @@ impl<
                 let report = self.handle_input_report(bus).await?;
                 Some(hid::Response::InputReport(report))
             }
+            hid::Request::Command(cmd) => self.handle_command(bus, &cmd).await?,
             _ => unimplemented!(),
         };
 
