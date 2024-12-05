@@ -85,6 +85,8 @@ impl Host {
                 hid::Request::Descriptor
             } else if reg == device.regs.report_desc_reg {
                 hid::Request::ReportDescriptor
+            } else if reg == device.regs.input_reg {
+                hid::Request::InputReport
             } else {
                 error!("Unexpected request address {:#x}", reg);
                 return Err(Error::InvalidAddress);
@@ -102,6 +104,13 @@ impl Host {
         }
     }
 
+    async fn process_read(&self) -> Result<(), Error> {
+        trace!("Got input report read request");
+        hid::send_request(&self.tp, self.id, hid::Request::InputReport)
+            .await
+            .map_err(|_| Error::Transport)
+    }
+
     /// Process a request from the host
     pub async fn wait_request(&self, bus: &mut impl I2cSlaveAsync) -> Result<Access, Error> {
         // Wait for HID register address
@@ -116,16 +125,16 @@ impl Host {
 
             match result.unwrap() {
                 I2cCommand::Probe => continue,
+                I2cCommand::Read => return Ok(Access::Read),
                 I2cCommand::Write => return Ok(Access::Write),
-                _ => unimplemented!(),
             }
         }
     }
 
     pub async fn process_request(&self, bus: &mut impl I2cSlaveAsync, access: Access) -> Result<(), Error> {
         match access {
+            Access::Read => self.process_read().await,
             Access::Write => self.process_register_access(bus).await,
-            _ => unimplemented!(),
         }
     }
 
@@ -134,6 +143,7 @@ impl Host {
             match response {
                 hid::Response::Descriptor(_) => trace!("Sending descriptor"),
                 hid::Response::ReportDescriptor(_) => trace!("Sending report descriptor"),
+                hid::Response::InputReport(_) => trace!("Sending input report"),
                 _ => trace!("Other response"),
             }
 
@@ -153,7 +163,9 @@ impl Host {
             }
 
             let result = match response {
-                hid::Response::Descriptor(data) | hid::Response::ReportDescriptor(data) => {
+                hid::Response::Descriptor(data)
+                | hid::Response::ReportDescriptor(data)
+                | hid::Response::InputReport(data) => {
                     let bytes = data.borrow();
                     self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, bytes.borrow()).await
                 }
