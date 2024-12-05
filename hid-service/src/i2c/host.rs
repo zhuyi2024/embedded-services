@@ -1,5 +1,6 @@
 //! I2C<->HID bridge
 use core::borrow::{Borrow, BorrowMut};
+use core::marker::PhantomData;
 
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::signal::Signal;
@@ -21,50 +22,52 @@ pub enum Access {
     Write,
 }
 
-pub struct Host {
+pub struct Host<B: I2cSlaveAsync> {
     id: DeviceId,
     pub tp: EndpointLink,
     response: Signal<NoopRawMutex, Option<hid::Response<'static>>>,
     buffer: OwnedRef<'static, u8>,
+    _phantom: PhantomData<B>,
 }
 
-impl Host {
+impl<B: I2cSlaveAsync> Host<B> {
     pub fn new(id: DeviceId, buffer: OwnedRef<'static, u8>) -> Self {
         Host {
             id,
             tp: EndpointLink::uninit(Endpoint::External(External::Host)),
             response: Signal::new(),
             buffer,
+            _phantom: PhantomData,
         }
     }
 
-    async fn read_bus(&self, bus: &mut impl I2cSlaveAsync, timeout_ms: u64, buffer: &mut [u8]) -> Result<(), Error> {
+    async fn read_bus(&self, bus: &mut B, timeout_ms: u64, buffer: &mut [u8]) -> Result<(), Error<B::Error>> {
         let result = with_timeout(Duration::from_millis(timeout_ms), bus.respond_to_write(buffer)).await;
         if result.is_err() {
             error!("Response timeout");
-            return Err(Error::Timeout);
+            return Err(Error::Hid(hid::Error::Timeout));
         }
 
         if let Err(e) = result.unwrap() {
-            error!("Bus error {:?}", e);
-            return Err(Error::Bus);
+            error!("Failed to read from bus");
+            return Err(Error::Bus(e));
         }
 
         Ok(())
     }
 
-    async fn write_bus(&self, bus: &mut impl I2cSlaveAsync, timeout_ms: u64, buffer: &[u8]) -> Result<(), Error> {
+    async fn write_bus(&self, bus: &mut B, timeout_ms: u64, buffer: &[u8]) -> Result<(), Error<B::Error>> {
         // Send response, timeout if the host doesn't read so we don't get stuck here
         trace!("Sending {} bytes", buffer.len());
         let result = with_timeout(Duration::from_millis(timeout_ms), bus.respond_to_read(buffer)).await;
         if result.is_err() {
             error!("Response timeout");
-            return Err(Error::Timeout);
+            return Err(Error::Hid(hid::Error::Timeout));
         }
 
         if let Err(e) = result.unwrap() {
-            error!("Bus error {:?}", e);
-            return Err(Error::Bus);
+            error!("Failed to rwrite to bus");
+            return Err(Error::Bus(e));
         }
 
         trace!("Response sent");
@@ -73,18 +76,18 @@ impl Host {
 
     async fn process_command(
         &self,
-        bus: &mut impl I2cSlaveAsync,
+        bus: &mut B,
         device: &hid::Device,
-    ) -> Result<hid::Command<'static>, Error> {
+    ) -> Result<hid::Command<'static>, Error<B::Error>> {
         trace!("Waiting for command");
         let mut cmd = [0u8; 2];
         self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut cmd).await?;
 
         let cmd = u16::from_le_bytes(cmd);
         let opcode = CommandOpcode::try_from(cmd);
-        if opcode.is_err() {
+        if let Err(e) = opcode {
             error!("Invalid command {:#x}", cmd);
-            return Err(Error::InvalidCommand);
+            return Err(Error::Hid(e));
         }
 
         trace!("Command {:#x}", cmd);
@@ -116,7 +119,7 @@ impl Host {
             let reg = u16::from_le_bytes(addr);
             if reg != device.regs.data_reg {
                 error!("Invalid data register {:#x}", reg);
-                return Err(Error::InvalidAddress);
+                return Err(Error::Hid(hid::Error::InvalidAddress));
             }
 
             if opcode.requires_host_data() {
@@ -129,7 +132,7 @@ impl Host {
                 let length = u16::from_le_bytes([buffer[0], buffer[1]]);
                 if buffer.len() < length as usize {
                     error!("Buffer overrun: {}", length);
-                    return Err(Error::InvalidSize);
+                    return Err(Error::Hid(hid::Error::InvalidSize));
                 }
 
                 trace!("Reading {} bytes", length);
@@ -148,14 +151,14 @@ impl Host {
         let command = hid::Command::new(cmd, opcode, report_type, report_id, buffer);
         if let Err(e) = command {
             error!("Invalid command {:?}", e);
-            return Err(Error::InvalidCommand);
+            return Err(Error::Hid(hid::Error::InvalidCommand));
         }
 
         Ok(command.unwrap())
     }
 
     /// Handle an access to a specific register
-    async fn process_register_access(&self, bus: &mut impl I2cSlaveAsync) -> Result<(), Error> {
+    async fn process_register_access(&self, bus: &mut B) -> Result<(), Error<B::Error>> {
         let mut reg = [0u8; 2];
         trace!("Waiting for register address");
         self.read_bus(bus, DATA_READ_TIMEOUT_MS, &mut reg).await?;
@@ -173,56 +176,56 @@ impl Host {
                 hid::Request::Command(self.process_command(bus, device).await?)
             } else {
                 error!("Unexpected request address {:#x}", reg);
-                return Err(Error::InvalidAddress);
+                return Err(Error::Hid(hid::Error::InvalidAddress));
             };
 
             hid::send_request(&self.tp, self.id, request)
                 .await
-                .map_err(|_| Error::Transport)?;
+                .map_err(|_| Error::Hid(hid::Error::Transport))?;
 
             trace!("Request processed");
             Ok(())
         } else {
             error!("Invalid device id {}", self.id.0);
-            Err(Error::InvalidDevice)
+            Err(Error::Hid(hid::Error::InvalidDevice))
         }
     }
 
-    async fn process_read(&self) -> Result<(), Error> {
+    async fn process_read(&self) -> Result<(), Error<B::Error>> {
         trace!("Got input report read request");
         hid::send_request(&self.tp, self.id, hid::Request::InputReport)
             .await
-            .map_err(|_| Error::Transport)
+            .map_err(|_| Error::Hid(hid::Error::Transport))
     }
 
     /// Process a request from the host
-    pub async fn wait_request(&self, bus: &mut impl I2cSlaveAsync) -> Result<Access, Error> {
+    pub async fn wait_request(&self, bus: &mut B) -> Result<Access, Error<B::Error>> {
         // Wait for HID register address
         loop {
             trace!("Waiting for host");
 
-            let result = bus.listen().await;
-            if let Err(e) = result {
-                error!("Bus error {:?}", e);
-                return Err(Error::Bus);
-            }
-
-            match result.unwrap() {
-                I2cCommand::Probe => continue,
-                I2cCommand::Read => return Ok(Access::Read),
-                I2cCommand::Write => return Ok(Access::Write),
+            match bus.listen().await {
+                Err(e) => {
+                    error!("Bus error");
+                    return Err(Error::Bus(e));
+                }
+                Ok(cmd) => match cmd {
+                    I2cCommand::Probe => continue,
+                    I2cCommand::Read => return Ok(Access::Read),
+                    I2cCommand::Write => return Ok(Access::Write),
+                },
             }
         }
     }
 
-    pub async fn process_request(&self, bus: &mut impl I2cSlaveAsync, access: Access) -> Result<(), Error> {
+    pub async fn process_request(&self, bus: &mut B, access: Access) -> Result<(), Error<B::Error>> {
         match access {
             Access::Read => self.process_read().await,
             Access::Write => self.process_register_access(bus).await,
         }
     }
 
-    pub async fn send_response(&self, bus: &mut impl I2cSlaveAsync) -> Result<(), Error> {
+    pub async fn send_response(&self, bus: &mut B) -> Result<(), Error<B::Error>> {
         if let Some(response) = self.response.wait().await {
             match response {
                 hid::Response::Descriptor(_) => trace!("Sending descriptor"),
@@ -235,15 +238,17 @@ impl Host {
             // Wait for the read from the host
             // Input reports just a read so we don't need to wait for one
             if !matches!(response, hid::Response::InputReport(_)) {
-                let result = bus.listen().await;
-                if let Err(e) = result {
-                    error!("Bus error {:?}", e);
-                    return Err(Error::Bus);
-                }
-
-                if !matches!(result.unwrap(), I2cCommand::Read) {
-                    error!("Expected read");
-                    return Err(Error::Bus);
+                match bus.listen().await {
+                    Err(e) => {
+                        error!("Bus error");
+                        return Err(Error::Bus(e));
+                    }
+                    Ok(cmd) => {
+                        if cmd != I2cCommand::Read {
+                            error!("Expected read");
+                            return Err(Error::Hid(hid::Error::Timeout));
+                        }
+                    }
                 }
             }
 
@@ -278,14 +283,14 @@ impl Host {
         }
     }
 
-    pub async fn process(&self, bus: &mut impl I2cSlaveAsync) -> Result<(), Error> {
+    pub async fn process(&self, bus: &mut B) -> Result<(), Error<B::Error>> {
         let access = self.wait_request(bus).await?;
         self.process_request(bus, access).await?;
         self.send_response(bus).await
     }
 }
 
-impl MessageDelegate for Host {
+impl<B: I2cSlaveAsync> MessageDelegate for Host<B> {
     fn process(&self, message: &transport::Message) {
         if message.to != Endpoint::External(External::Host) {
             return;

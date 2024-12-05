@@ -24,6 +24,12 @@ pub enum Error {
     InvalidData,
     /// Invalid size
     InvalidSize,
+    /// Invalid register address
+    InvalidAddress,
+    /// Invalid device
+    InvalidDevice,
+    /// Invalid command
+    InvalidCommand,
     /// Command requires a report ID
     RequiresReportId,
     /// Command requires data
@@ -32,6 +38,12 @@ pub enum Error {
     InvalidReportType,
     /// Invalid report frequency
     InvalidReportFreq,
+    /// Error from transport service
+    Transport,
+    /// Timeout
+    Timeout,
+    /// Errors from serialization/deserialization
+    Serialize,
 }
 
 /// HID descriptor, see spec for descriptions

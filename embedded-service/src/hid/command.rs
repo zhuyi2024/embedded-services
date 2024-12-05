@@ -54,13 +54,13 @@ pub enum PowerState {
 
 const POWER_STATE_MASK: u16 = 0x3;
 impl TryFrom<u16> for PowerState {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value & POWER_STATE_MASK {
             0x0 => Ok(PowerState::On),
             0x1 => Ok(PowerState::Sleep),
-            _ => Err(()),
+            _ => Err(Error::Serialize),
         }
     }
 }
@@ -84,7 +84,7 @@ pub enum ReportFreq {
 }
 
 impl TryFrom<u16> for ReportFreq {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
@@ -113,13 +113,13 @@ pub enum Protocol {
 }
 
 impl TryFrom<u16> for Protocol {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
             0x0 => Ok(Protocol::Boot),
             0x1 => Ok(Protocol::Report),
-            _ => Err(()),
+            _ => Err(Error::Serialize),
         }
     }
 }
@@ -153,7 +153,7 @@ const OPCODE_MASK: u16 = 0xf00;
 const OPCODE_SHIFT: u16 = 8;
 
 impl TryFrom<u16> for CommandOpcode {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match (value & OPCODE_MASK) >> OPCODE_SHIFT {
@@ -166,7 +166,7 @@ impl TryFrom<u16> for CommandOpcode {
             0x07 => Ok(CommandOpcode::SetProtocol),
             0x08 => Ok(CommandOpcode::SetPower),
             0x0e => Ok(CommandOpcode::Vendor),
-            _ => Err(()),
+            _ => Err(Error::Serialize),
         }
     }
 }
