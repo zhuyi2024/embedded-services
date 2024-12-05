@@ -144,6 +144,7 @@ impl Host {
                 hid::Response::Descriptor(_) => trace!("Sending descriptor"),
                 hid::Response::ReportDescriptor(_) => trace!("Sending report descriptor"),
                 hid::Response::InputReport(_) => trace!("Sending input report"),
+                hid::Response::FeatureReport(_) => trace!("Sending feature report"),
                 _ => trace!("Other response"),
             }
 
@@ -165,7 +166,8 @@ impl Host {
             let result = match response {
                 hid::Response::Descriptor(data)
                 | hid::Response::ReportDescriptor(data)
-                | hid::Response::InputReport(data) => {
+                | hid::Response::InputReport(data)
+                | hid::Response::FeatureReport(data) => {
                     let bytes = data.borrow();
                     self.write_bus(bus, DEVICE_RESPONSE_TIMEOUT_MS, bytes.borrow()).await
                 }
