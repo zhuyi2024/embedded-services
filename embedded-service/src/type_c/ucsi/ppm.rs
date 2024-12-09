@@ -1,5 +1,7 @@
 use bitfield::bitfield;
 
+use crate::type_c::Error;
+
 bitfield! {
     /// PPM notifications that can be enabled, see spec for more details
     #[derive(Copy, Clone)]
@@ -41,3 +43,5 @@ pub enum Command {
 pub enum ResponseData {
     Complete,
 }
+
+pub type Response = Result<ResponseData, Error>;

@@ -1,4 +1,4 @@
-use crate::type_c::PortId;
+use crate::type_c::{Error, PortId};
 
 /// Connector reset types
 #[derive(Copy, Clone, Debug)]
@@ -29,3 +29,5 @@ pub struct Command {
 pub enum ResponseData {
     Complete,
 }
+
+pub type Response = Result<ResponseData, Error>;
