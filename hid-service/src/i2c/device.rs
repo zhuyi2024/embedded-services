@@ -1,6 +1,5 @@
 use core::borrow::BorrowMut;
-use core::cell::Cell;
-use core::marker::PhantomData;
+use core::cell::{Cell, RefCell};
 
 use embedded_hal_async::i2c::{AddressMode, I2c};
 use embedded_services::buffer::*;
@@ -14,25 +13,26 @@ pub struct Device<A: AddressMode + Copy, B: I2c<A>> {
     buffer: OwnedRef<'static, u8>,
     address: A,
     descriptor: Cell<Option<hid::Descriptor>>,
-    _phantom: PhantomData<B>,
+    bus: RefCell<B>,
 }
 
 impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
-    pub fn new(id: hid::DeviceId, address: A, regs: hid::RegisterFile, buffer: OwnedRef<'static, u8>) -> Self {
+    pub fn new(id: hid::DeviceId, address: A, bus: B, regs: hid::RegisterFile, buffer: OwnedRef<'static, u8>) -> Self {
         Self {
             device: hid::Device::new(id, regs),
             buffer,
             address,
             descriptor: Cell::new(None),
-            _phantom: PhantomData,
+            bus: RefCell::new(bus),
         }
     }
 
-    async fn get_hid_descriptor(&self, bus: &mut B) -> Result<hid::Descriptor, Error<B::Error>> {
+    async fn get_hid_descriptor(&self) -> Result<hid::Descriptor, Error<B::Error>> {
         if self.descriptor.get().is_some() {
             return Ok(self.descriptor.get().unwrap());
         }
 
+        let mut bus = self.bus.borrow_mut();
         let mut borrow = self.buffer.borrow_mut();
         let mut reg = [0u8; 2];
         let buf: &mut [u8] = borrow.borrow_mut();
@@ -56,8 +56,8 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(desc)
     }
 
-    pub async fn read_hid_descriptor(&self, bus: &mut B) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
-        let desc = self.get_hid_descriptor(bus).await?;
+    pub async fn read_hid_descriptor(&self) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
+        let desc = self.get_hid_descriptor().await?;
 
         let mut borrow = self.buffer.borrow_mut();
         let buf: &mut [u8] = borrow.borrow_mut();
@@ -67,15 +67,16 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(self.buffer.reference().slice(0..len))
     }
 
-    pub async fn read_report_descriptor(&self, bus: &mut B) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
+    pub async fn read_report_descriptor(&self) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
         info!("Sending report descriptor");
 
         let mut borrow = self.buffer.borrow_mut();
         let buf: &mut [u8] = borrow.borrow_mut();
-        let desc = self.get_hid_descriptor(bus).await?;
+        let desc = self.get_hid_descriptor().await?;
         let reg = desc.w_report_desc_register.to_le_bytes();
         let len = desc.w_report_desc_length as usize;
 
+        let mut bus = self.bus.borrow_mut();
         if let Err(e) = bus.write_read(self.address, &reg, &mut buf[0..len]).await {
             error!("Failed to read report descriptor");
             return Err(Error::Bus(e));
@@ -84,14 +85,15 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(self.buffer.reference().slice(0..len))
     }
 
-    pub async fn handle_input_report(&self, bus: &mut B) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
+    pub async fn handle_input_report(&self) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
         info!("Handling input report");
-        let desc = self.get_hid_descriptor(bus).await?;
+        let desc = self.get_hid_descriptor().await?;
 
         let mut borrow = self.buffer.borrow_mut();
         let buf: &mut [u8] = borrow.borrow_mut();
         let buf = &mut buf[0..desc.w_max_input_length as usize];
 
+        let mut bus = self.bus.borrow_mut();
         if let Err(e) = bus.read(self.address, buf).await {
             error!("Failed to read input report");
             return Err(Error::Bus(e));
@@ -102,7 +104,6 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
 
     pub async fn handle_command(
         &self,
-        bus: &mut B,
         cmd: &hid::Command<'static>,
     ) -> Result<Option<Response<'static>>, Error<B::Error>> {
         info!("Handling command");
@@ -125,6 +126,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         }
 
         let len = res.unwrap();
+        let mut bus = self.bus.borrow_mut();
         if let Err(e) = bus.write(self.address, &buf[..len]).await {
             error!("Failed to write command");
             return Err(Error::Bus(e));
@@ -143,23 +145,23 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(None)
     }
 
-    pub async fn process_request(&self, bus: &mut B) -> Result<(), Error<B::Error>> {
+    pub async fn process_request(&self) -> Result<(), Error<B::Error>> {
         let req = self.device.wait_request().await;
 
         let response = match req {
             hid::Request::Descriptor => {
-                let desc = self.read_hid_descriptor(bus).await?;
+                let desc = self.read_hid_descriptor().await?;
                 Some(hid::Response::Descriptor(desc))
             }
             hid::Request::ReportDescriptor => {
-                let desc = self.read_report_descriptor(bus).await?;
+                let desc = self.read_report_descriptor().await?;
                 Some(hid::Response::ReportDescriptor(desc))
             }
             hid::Request::InputReport => {
-                let report = self.handle_input_report(bus).await?;
+                let report = self.handle_input_report().await?;
                 Some(hid::Response::InputReport(report))
             }
-            hid::Request::Command(cmd) => self.handle_command(bus, &cmd).await?,
+            hid::Request::Command(cmd) => self.handle_command(&cmd).await?,
             _ => unimplemented!(),
         };
 
