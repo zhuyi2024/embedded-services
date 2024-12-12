@@ -12,6 +12,7 @@ embedded-services = { path = "../embedded-service" }
 embassy-time = { git = "https://github.com/embassy-rs/embassy" }
 embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
 embedded-hal-async = { version = "1.0" }
+embedded-hal = { package = "embedded-hal", version = "1.0" }
 defmt = { version = "0.3", optional = true }
 log = { version = "0.4.14", optional = true }
 

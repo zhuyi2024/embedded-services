@@ -1,5 +1,6 @@
 mod device;
 mod host;
+pub mod passthrough;
 
 pub use device::*;
 pub use host::*;
