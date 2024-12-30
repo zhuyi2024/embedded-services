@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 description = "Power button service built upon embedded service"
 repository = "https://github.com/pop-project/embedded-services"
-rust-version = "1.79"
+rust-version = "1.83"
 
 [dependencies]
 defmt = { version = "0.3", optional = true }

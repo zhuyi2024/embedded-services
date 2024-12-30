@@ -213,11 +213,12 @@ jobs:
       matrix:
         commit: ${{ fromJSON(needs.commit_list.outputs.commits) }}
         workdir: [ "embedded-service", "power-button-service"]
-        msrv: ["1.79"] # We're relying on namespaced-features, which
+        msrv: ["1.83"] # We're relying on namespaced-features, which
                        # was released in 1.60
                        #
                        # We also depend on `fixed' which requires rust
                        # 1.79
+                       # Embassy requires 1.83
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v4

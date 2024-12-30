@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 description = "Embedded Service Layer for IPC, Feature Customization and Extension in Embedded Devices."
 repository = "https://github.com/pop-project/embedded-services"
-rust-version = "1.79"
+rust-version = "1.83"
 
 [dependencies]
 embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
