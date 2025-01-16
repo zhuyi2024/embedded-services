@@ -115,11 +115,63 @@ For example, temperature_service
         embassy-imxrt: +write()
 ```
 
+### hid-service
+
+HID over I2c transport
+
+### power-button-service
+
+Service to manage a power button
+
+### espi-service
+
+Provide eSPI transport, similar to traditional x86 EC, a memory map table of information will be maintained.
+
+```mermaid
+   erDiagram
+    p[MemoryTable] {
+        u32 battery_status
+        u32 battery_charge_threshold
+        u32 field
+    }
+```
+
+#### read operation
+
+```mermaid
+    sequenceDiagram
+        battery_service->>espi_service: Update battery status
+        host-->>espi_service: Get battery status
+        espi_service-->>host: Provide cached battery status
+        battery_service->>espi_service: Update battery status
+```
+
+- service register with the espi service for an entry in the table
+- service periodically update their table entries by sending a message throught transport to espi_service
+- host eSPI peripheral channel read always gets the cached value
+
+#### write operation
+
+```mermaid
+    sequenceDiagram
+        host-->>espi_service: Set battery charge threshold
+        espi_service->>battery_service: Set battery charge threshold
+        battery_service-->>charger: Set battery charge threshold
+        battery_service->>espi_service: Done setting battery charge threshold
+        espi_service-->>host: Battery charge threshold updated
+```
+
+- service register with the espi service for an entry in the table
+- host eSPI peripherla channel write opertions triggers espi_service to send message to battery_service to update the charge threshold
+- battery service performs the bus operation to update the charge threshold on the charge
+- after bus operation is done, battery service notifies espi_service
+- espi_service updates the memory table and optionally can notify the host
+
 # EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
 
-Sets of services be grouped into subsystem. For instance, thermal subsystem will consist of temperature-service + fan-service + battery-service + debug-service + host-comm-service. The service talks to each other through the transport (IPC) layer. An EC service will also be shared between different subsystems. For instance, debug-service will subcribe to debug messages from other services.
+Sets of services can be grouped into subsystem. For instance, thermal subsystem will consist of temperature-service + fan-service + battery-service + debug-service + host-comm-service. The service talks to each other through the transport (IPC) layer. An EC service can also be shared between different subsystems. For instance, debug-service will subcribe to debug messages from other services.
 
 ```
 async fn (spawner: Spawner) {
