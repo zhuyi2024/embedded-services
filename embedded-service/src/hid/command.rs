@@ -18,16 +18,28 @@ pub enum ReportType {
 
 const FEATURE_MASK: u16 = 0x30;
 const FEATURE_SHIFT: u16 = 4;
+/// Size of a command with an extended report ID
+const EXTENDED_REPORT_CMD_LEN: usize = 3;
+/// Size of a command with a standard report ID
+const STANDARD_REPORT_CMD_LEN: usize = 2;
+/// Size of a command with no additional data
+const BASIC_CMD_LEN: usize = 2;
+/// Size of a register value
+const REGISTER_LEN: usize = 2;
+/// Size of a 16-bit value prefixed with a length
+const LENGTH_VALUE_LEN: usize = 4;
+/// Standard 16-bit value length
+const VALUE_LEN: usize = 2;
 
 impl TryFrom<u16> for ReportType {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match (value & FEATURE_MASK) >> FEATURE_SHIFT {
             0x01 => Ok(ReportType::Input),
             0x02 => Ok(ReportType::Output),
             0x03 => Ok(ReportType::Feature),
-            _ => Err(()),
+            _ => Err(Error::Serialize),
         }
     }
 }
@@ -137,7 +149,7 @@ impl Into<u16> for Protocol {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
-pub enum CommandOpcode {
+pub enum Opcode {
     Reset,
     GetReport,
     SetReport,
@@ -152,46 +164,46 @@ pub enum CommandOpcode {
 const OPCODE_MASK: u16 = 0xf00;
 const OPCODE_SHIFT: u16 = 8;
 
-impl TryFrom<u16> for CommandOpcode {
+impl TryFrom<u16> for Opcode {
     type Error = Error;
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match (value & OPCODE_MASK) >> OPCODE_SHIFT {
-            0x01 => Ok(CommandOpcode::Reset),
-            0x02 => Ok(CommandOpcode::GetReport),
-            0x03 => Ok(CommandOpcode::SetReport),
-            0x04 => Ok(CommandOpcode::GetIdle),
-            0x05 => Ok(CommandOpcode::SetIdle),
-            0x06 => Ok(CommandOpcode::GetProtocol),
-            0x07 => Ok(CommandOpcode::SetProtocol),
-            0x08 => Ok(CommandOpcode::SetPower),
-            0x0e => Ok(CommandOpcode::Vendor),
+            0x01 => Ok(Opcode::Reset),
+            0x02 => Ok(Opcode::GetReport),
+            0x03 => Ok(Opcode::SetReport),
+            0x04 => Ok(Opcode::GetIdle),
+            0x05 => Ok(Opcode::SetIdle),
+            0x06 => Ok(Opcode::GetProtocol),
+            0x07 => Ok(Opcode::SetProtocol),
+            0x08 => Ok(Opcode::SetPower),
+            0x0e => Ok(Opcode::Vendor),
             _ => Err(Error::Serialize),
         }
     }
 }
 
-impl Into<u16> for CommandOpcode {
+impl Into<u16> for Opcode {
     fn into(self) -> u16 {
         match self {
-            CommandOpcode::Reset => 0x01 << OPCODE_SHIFT,
-            CommandOpcode::GetReport => 0x02 << OPCODE_SHIFT,
-            CommandOpcode::SetReport => 0x03 << OPCODE_SHIFT,
-            CommandOpcode::GetIdle => 0x04 << OPCODE_SHIFT,
-            CommandOpcode::SetIdle => 0x05 << OPCODE_SHIFT,
-            CommandOpcode::GetProtocol => 0x06 << OPCODE_SHIFT,
-            CommandOpcode::SetProtocol => 0x07 << OPCODE_SHIFT,
-            CommandOpcode::SetPower => 0x08 << OPCODE_SHIFT,
-            CommandOpcode::Vendor => 0x0e << OPCODE_SHIFT,
+            Opcode::Reset => 0x01 << OPCODE_SHIFT,
+            Opcode::GetReport => 0x02 << OPCODE_SHIFT,
+            Opcode::SetReport => 0x03 << OPCODE_SHIFT,
+            Opcode::GetIdle => 0x04 << OPCODE_SHIFT,
+            Opcode::SetIdle => 0x05 << OPCODE_SHIFT,
+            Opcode::GetProtocol => 0x06 << OPCODE_SHIFT,
+            Opcode::SetProtocol => 0x07 << OPCODE_SHIFT,
+            Opcode::SetPower => 0x08 << OPCODE_SHIFT,
+            Opcode::Vendor => 0x0e << OPCODE_SHIFT,
         }
     }
 }
 
-impl CommandOpcode {
+impl Opcode {
     /// Return true if the command has data to read from the host
     pub fn requires_host_data(&self) -> bool {
         match self {
-            CommandOpcode::SetReport | CommandOpcode::SetIdle | CommandOpcode::Vendor => true,
+            Opcode::SetReport | Opcode::SetIdle | Opcode::Vendor => true,
             _ => false,
         }
     }
@@ -199,9 +211,7 @@ impl CommandOpcode {
     /// Return true if the command requires a report ID
     pub fn requires_report_id(&self) -> bool {
         match self {
-            CommandOpcode::GetReport | CommandOpcode::SetReport | CommandOpcode::GetIdle | CommandOpcode::SetIdle => {
-                true
-            }
+            Opcode::GetReport | Opcode::SetReport | Opcode::GetIdle | Opcode::SetIdle => true,
             _ => false,
         }
     }
@@ -209,7 +219,7 @@ impl CommandOpcode {
     /// Return true if the command has a response read from the data register
     pub fn has_response(&self) -> bool {
         match self {
-            CommandOpcode::GetReport | CommandOpcode::GetIdle | CommandOpcode::GetProtocol => true,
+            Opcode::GetReport | Opcode::GetIdle | Opcode::GetProtocol => true,
             _ => false,
         }
     }
@@ -231,20 +241,25 @@ pub enum Command<'a> {
     Vendor,
 }
 
-impl<'a> Command<'a> {
-    /// Get the opcode for the command
-    pub fn opcode(&self) -> CommandOpcode {
+impl Into<Opcode> for Command<'_> {
+    fn into(self) -> Opcode {
         match self {
-            Command::Reset => CommandOpcode::Reset,
-            Command::GetReport(_, _) => CommandOpcode::GetReport,
-            Command::SetReport(_, _, _) => CommandOpcode::SetReport,
-            Command::GetIdle(_) => CommandOpcode::GetIdle,
-            Command::SetIdle(_, _) => CommandOpcode::SetIdle,
-            Command::GetProtocol => CommandOpcode::GetProtocol,
-            Command::SetProtocol(_) => CommandOpcode::SetProtocol,
-            Command::SetPower(_) => CommandOpcode::SetPower,
-            Command::Vendor => CommandOpcode::Vendor,
+            Command::Reset => Opcode::Reset,
+            Command::GetReport(_, _) => Opcode::GetReport,
+            Command::SetReport(_, _, _) => Opcode::SetReport,
+            Command::GetIdle(_) => Opcode::GetIdle,
+            Command::SetIdle(_, _) => Opcode::SetIdle,
+            Command::GetProtocol => Opcode::GetProtocol,
+            Command::SetProtocol(_) => Opcode::SetProtocol,
+            Command::SetPower(_) => Opcode::SetPower,
+            Command::Vendor => Opcode::Vendor,
         }
+    }
+}
+
+impl Into<Opcode> for &Command<'_> {
+    fn into(self) -> Opcode {
+        self.clone().into()
     }
 }
 
@@ -280,7 +295,7 @@ impl<'a> Command<'a> {
     /// Creates a new command with validation
     pub fn new(
         cmd: u16,
-        opcode: CommandOpcode,
+        opcode: Opcode,
         report_type: Option<ReportType>,
         report_id: Option<ReportId>,
         data: Option<SharedRef<'a, u8>>,
@@ -291,45 +306,47 @@ impl<'a> Command<'a> {
 
         if opcode.requires_host_data() && data.is_none() {
             // Vendor defined commands might or might not have data with them
-            if opcode != CommandOpcode::Vendor {
+            if opcode != Opcode::Vendor {
                 return Err(Error::RequiresData);
             }
         }
 
         let report_type = report_type.ok_or_else(|| Error::InvalidReportType);
         let command = match opcode {
-            CommandOpcode::Reset => Command::Reset,
-            CommandOpcode::GetReport => {
+            Opcode::Reset => Command::Reset,
+            Opcode::GetReport => {
                 if report_type? == ReportType::Input || report_type? == ReportType::Feature {
                     Command::GetReport(report_type?, report_id.unwrap())
                 } else {
                     return Err(Error::InvalidReportType);
                 }
             }
-            CommandOpcode::SetReport => {
+            Opcode::SetReport => {
                 if report_type? == ReportType::Output || report_type? == ReportType::Feature {
                     Command::SetReport(report_type?, report_id.unwrap(), data.unwrap())
                 } else {
                     return Err(Error::InvalidReportType);
                 }
             }
-            CommandOpcode::GetIdle => Command::GetIdle(report_id.unwrap()),
-            CommandOpcode::SetIdle => Command::SetIdle(
+            Opcode::GetIdle => Command::GetIdle(report_id.unwrap()),
+            Opcode::SetIdle => Command::SetIdle(
                 report_id.unwrap(),
                 cmd.try_into().map_err(|_| Error::InvalidReportFreq)?,
             ),
-            CommandOpcode::GetProtocol => Command::GetProtocol,
-            CommandOpcode::SetProtocol => Command::SetProtocol(cmd.try_into().map_err(|_| Error::InvalidData)?),
-            CommandOpcode::SetPower => Command::SetPower(cmd.try_into().map_err(|_| Error::InvalidData)?),
-            CommandOpcode::Vendor => Command::Vendor,
+            Opcode::GetProtocol => Command::GetProtocol,
+            Opcode::SetProtocol => Command::SetProtocol(cmd.try_into().map_err(|_| Error::InvalidData)?),
+            Opcode::SetPower => Command::SetPower(cmd.try_into().map_err(|_| Error::InvalidData)?),
+            Opcode::Vendor => Command::Vendor,
         };
 
         Ok(command)
     }
 
+    /// Encodes common values for a command with a report ID into a slice
+    /// Returns the number of bytes written and the remaining buffer
     fn encode_common(
         buf: &mut [u8],
-        opcode: CommandOpcode,
+        opcode: Opcode,
         report_type: Option<ReportType>,
         report_id: ReportId,
     ) -> Result<(usize, &mut [u8]), Error> {
@@ -338,64 +355,78 @@ impl<'a> Command<'a> {
         val |= report_type.map_or(0, |x| x.into());
 
         if report_id.0 >= EXTENDED_REPORT_ID {
-            if buf.len() < 3 {
-                return Err(Error::InvalidSize);
+            if buf.len() < EXTENDED_REPORT_CMD_LEN {
+                return Err(Error::InvalidSize(EXTENDED_REPORT_CMD_LEN, buf.len()));
             }
 
             val |= EXTENDED_REPORT_ID as u16;
 
-            buf[0..2].copy_from_slice(&val.to_le_bytes());
-            buf[2] = report_id.0;
+            // Copy standard data encoding the presence of an extended report ID
+            buf[0..STANDARD_REPORT_CMD_LEN].copy_from_slice(&val.to_le_bytes());
+            // Append extended report ID
+            buf[STANDARD_REPORT_CMD_LEN] = report_id.0;
 
-            Ok((3, &mut buf[3..]))
+            Ok((EXTENDED_REPORT_CMD_LEN, &mut buf[EXTENDED_REPORT_CMD_LEN..]))
         } else {
+            if buf.len() < STANDARD_REPORT_CMD_LEN {
+                return Err(Error::InvalidSize(STANDARD_REPORT_CMD_LEN, buf.len()));
+            }
+
             val |= report_id.0 as u16;
 
-            buf[0..2].copy_from_slice(&val.to_le_bytes());
-            Ok((2, &mut buf[2..]))
+            buf[0..STANDARD_REPORT_CMD_LEN].copy_from_slice(&val.to_le_bytes());
+            Ok((STANDARD_REPORT_CMD_LEN, &mut buf[STANDARD_REPORT_CMD_LEN..]))
         }
     }
 
-    fn encode_basic_op(buf: &mut [u8], opcode: CommandOpcode) -> Result<(usize, &mut [u8]), Error> {
-        if buf.len() < 2 {
-            return Err(Error::InvalidSize);
+    /// Encodes an operation with no report ID or additional data into a slice
+    /// Returns the number of bytes written and the remaining buffer
+    fn encode_basic_op(buf: &mut [u8], opcode: Opcode) -> Result<(usize, &mut [u8]), Error> {
+        if buf.len() < BASIC_CMD_LEN {
+            return Err(Error::InvalidSize(BASIC_CMD_LEN, buf.len()));
         }
 
-        buf[0..2].copy_from_slice(&<CommandOpcode as Into<u16>>::into(opcode).to_le_bytes());
-        Ok((2, &mut buf[2..]))
+        buf[0..BASIC_CMD_LEN].copy_from_slice(&<Opcode as Into<u16>>::into(opcode).to_le_bytes());
+        Ok((BASIC_CMD_LEN, &mut buf[BASIC_CMD_LEN..]))
     }
 
+    /// Encodes a register address into a slice
+    /// Returns the number of bytes written and the remaining buffer
     fn encode_register(buf: &mut [u8], reg: Option<u16>) -> Result<(usize, &mut [u8]), Error> {
         if let Some(reg) = reg {
-            if buf.len() < 2 {
-                return Err(Error::InvalidSize);
+            if buf.len() < REGISTER_LEN {
+                return Err(Error::InvalidSize(REGISTER_LEN, buf.len()));
             }
-            buf[0..2].copy_from_slice(&reg.to_le_bytes());
-            Ok((2, &mut buf[2..]))
+            buf[0..REGISTER_LEN].copy_from_slice(&reg.to_le_bytes());
+            Ok((REGISTER_LEN, &mut buf[REGISTER_LEN..]))
         } else {
             Ok((0, buf))
         }
     }
 
     /// Encodes a u16 value into a slice, prefixed by a length
+    /// Returns the number of bytes written and the remaining buffer
     fn encode_value<T: Into<u16>>(buf: &mut [u8], value: T) -> Result<(usize, &mut [u8]), Error> {
-        if buf.len() < 4 {
-            return Err(Error::InvalidSize);
+        if buf.len() < LENGTH_VALUE_LEN {
+            return Err(Error::InvalidSize(LENGTH_VALUE_LEN, buf.len()));
         }
-        buf[0..2].copy_from_slice(&4u16.to_le_bytes());
-        buf[2..4].copy_from_slice(&value.into().to_le_bytes());
-        Ok((4, &mut buf[2..]))
+        // Length value includes the size of the length as well
+        buf[0..VALUE_LEN].copy_from_slice(&4u16.to_le_bytes());
+        buf[VALUE_LEN..LENGTH_VALUE_LEN].copy_from_slice(&value.into().to_le_bytes());
+        Ok((LENGTH_VALUE_LEN, &mut buf[LENGTH_VALUE_LEN..]))
     }
 
+    /// Encodes data into a slice, prefixed by a length
+    /// Returns the number of bytes written and the remaining buffer
     fn encode_data<'b>(buf: &'b mut [u8], data: &[u8]) -> Result<(usize, &'b mut [u8]), Error> {
         // +2 to encode the length of the data
         let total_len = data.len() + 2;
         if buf.len() < total_len {
-            return Err(Error::InvalidSize);
+            return Err(Error::InvalidSize(total_len, buf.len()));
         }
 
-        buf[0..2].copy_from_slice(&(total_len as u16).to_le_bytes());
-        buf[2..data.len() + 2].copy_from_slice(data);
+        buf[0..VALUE_LEN].copy_from_slice(&(total_len as u16).to_le_bytes());
+        buf[VALUE_LEN..data.len() + VALUE_LEN].copy_from_slice(data);
         Ok((total_len, &mut buf[data.len()..]))
     }
 
@@ -416,12 +447,11 @@ impl<'a> Command<'a> {
 
         match self {
             Command::Reset => {
-                let (command_len, _) = Self::encode_basic_op(buf, CommandOpcode::Reset)?;
+                let (command_len, _) = Self::encode_basic_op(buf, Opcode::Reset)?;
                 len += command_len;
             }
             Command::GetReport(report_type, report_id) => {
-                let (command_len, buf) =
-                    Self::encode_common(buf, CommandOpcode::GetReport, Some(*report_type), *report_id)?;
+                let (command_len, buf) = Self::encode_common(buf, Opcode::GetReport, Some(*report_type), *report_id)?;
                 len += command_len;
 
                 // Encode data register address
@@ -432,8 +462,7 @@ impl<'a> Command<'a> {
                 let borrow = data.borrow();
                 let data: &[u8] = borrow.borrow();
 
-                let (command_len, buf) =
-                    Self::encode_common(buf, CommandOpcode::SetReport, Some(*report_type), *report_id)?;
+                let (command_len, buf) = Self::encode_common(buf, Opcode::SetReport, Some(*report_type), *report_id)?;
                 len += command_len;
 
                 // Encode data register address
@@ -445,7 +474,7 @@ impl<'a> Command<'a> {
                 len += data_len
             }
             Command::GetIdle(report_id) => {
-                let (command_len, buf) = Self::encode_common(buf, CommandOpcode::GetIdle, None, *report_id)?;
+                let (command_len, buf) = Self::encode_common(buf, Opcode::GetIdle, None, *report_id)?;
                 len += command_len;
 
                 // Encode data register address
@@ -453,12 +482,8 @@ impl<'a> Command<'a> {
                 len += register_len;
             }
             Command::SetIdle(report_id, freq) => {
-                let (command_len, buf) = Self::encode_common(buf, CommandOpcode::SetIdle, None, *report_id)?;
+                let (command_len, buf) = Self::encode_common(buf, Opcode::SetIdle, None, *report_id)?;
                 len += command_len;
-
-                if buf.len() < 4 {
-                    return Err(Error::InvalidSize);
-                }
 
                 // Encode data register address
                 let (register_len, buf) = Self::encode_register(buf, data_reg)?;
@@ -469,7 +494,7 @@ impl<'a> Command<'a> {
                 len += data_len;
             }
             Command::GetProtocol => {
-                let (command_len, buf) = Self::encode_basic_op(buf, CommandOpcode::GetProtocol)?;
+                let (command_len, buf) = Self::encode_basic_op(buf, Opcode::GetProtocol)?;
                 len += command_len;
 
                 // Encode data register address
@@ -477,7 +502,7 @@ impl<'a> Command<'a> {
                 len += register_len;
             }
             Command::SetProtocol(protocol) => {
-                let (command_len, buf) = Self::encode_basic_op(buf, CommandOpcode::SetProtocol)?;
+                let (command_len, buf) = Self::encode_basic_op(buf, Opcode::SetProtocol)?;
                 len += command_len;
 
                 // Encode data register address
@@ -489,13 +514,13 @@ impl<'a> Command<'a> {
                 len += data_len;
             }
             Command::SetPower(state) => {
-                let opcode: u16 = CommandOpcode::SetPower.into();
+                let opcode: u16 = Opcode::SetPower.into();
                 let state: u16 = (*state).into();
                 buf[0..2].copy_from_slice(&(opcode | state).to_le_bytes());
                 len += 2;
             }
             Command::Vendor => {
-                let (command_len, _) = Self::encode_basic_op(buf, CommandOpcode::Vendor)?;
+                let (command_len, _) = Self::encode_basic_op(buf, Opcode::Vendor)?;
                 len += command_len;
             }
         }

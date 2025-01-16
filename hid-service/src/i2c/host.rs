@@ -6,7 +6,7 @@ use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{with_timeout, Duration};
 use embedded_services::buffer::OwnedRef;
-use embedded_services::hid::{self, CommandOpcode, DeviceId};
+use embedded_services::hid::{self, DeviceId, Opcode};
 use embedded_services::transport::{self, Endpoint, EndpointLink, External, MessageDelegate};
 use embedded_services::{error, trace};
 
@@ -82,7 +82,7 @@ impl<B: I2cSlaveAsync> Host<B> {
         self.read_bus(DATA_READ_TIMEOUT_MS, &mut cmd).await?;
 
         let cmd = u16::from_le_bytes(cmd);
-        let opcode = CommandOpcode::try_from(cmd);
+        let opcode = Opcode::try_from(cmd);
         if let Err(e) = opcode {
             error!("Invalid command {:#x}", cmd);
             return Err(Error::Hid(e));
@@ -117,7 +117,7 @@ impl<B: I2cSlaveAsync> Host<B> {
             let reg = u16::from_le_bytes(addr);
             if reg != device.regs.data_reg {
                 error!("Invalid data register {:#x}", reg);
-                return Err(Error::Hid(hid::Error::InvalidAddress));
+                return Err(Error::Hid(hid::Error::InvalidRegisterAddress));
             }
 
             if opcode.requires_host_data() {
@@ -130,7 +130,7 @@ impl<B: I2cSlaveAsync> Host<B> {
                 let length = u16::from_le_bytes([buffer[0], buffer[1]]);
                 if buffer.len() < length as usize {
                     error!("Buffer overrun: {}", length);
-                    return Err(Error::Hid(hid::Error::InvalidSize));
+                    return Err(Error::Hid(hid::Error::InvalidSize(length as usize, buffer.len())));
                 }
 
                 trace!("Reading {} bytes", length);
@@ -174,7 +174,7 @@ impl<B: I2cSlaveAsync> Host<B> {
                 hid::Request::Command(self.process_command(device).await?)
             } else {
                 error!("Unexpected request address {:#x}", reg);
-                return Err(Error::Hid(hid::Error::InvalidAddress));
+                return Err(Error::Hid(hid::Error::InvalidRegisterAddress));
             };
 
             hid::send_request(&self.tp, self.id, request)
@@ -244,7 +244,7 @@ impl<B: I2cSlaveAsync> Host<B> {
                     }
                     Ok(cmd) => {
                         if cmd != I2cCommand::Read {
-                            error!("Expected read");
+                            error!("Expected read, got {:?}", cmd);
                             return Err(Error::Hid(hid::Error::Timeout));
                         }
                     }

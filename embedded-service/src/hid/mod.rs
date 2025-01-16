@@ -22,10 +22,10 @@ pub const DESCRIPTOR_LEN: usize = 30;
 pub enum Error {
     /// Invalid data
     InvalidData,
-    /// Invalid size
-    InvalidSize,
+    /// Invalid size: expected and actual sizes
+    InvalidSize(usize, usize),
     /// Invalid register address
-    InvalidAddress,
+    InvalidRegisterAddress,
     /// Invalid device
     InvalidDevice,
     /// Invalid command
@@ -70,7 +70,7 @@ impl Descriptor {
     /// Serializes a descriptor into the slice
     pub fn encode_into_slice(&self, buf: &mut [u8]) -> Result<usize, Error> {
         if buf.len() < DESCRIPTOR_LEN {
-            return Err(Error::InvalidSize);
+            return Err(Error::InvalidSize(DESCRIPTOR_LEN, buf.len()));
         }
 
         buf[0..2].copy_from_slice(&self.w_hid_desc_length.to_le_bytes());
@@ -95,7 +95,7 @@ impl Descriptor {
     /// Deserializes a descriptor from the slice
     pub fn decode_from_slice(buf: &[u8]) -> Result<Self, Error> {
         if buf.len() < DESCRIPTOR_LEN {
-            return Err(Error::InvalidSize);
+            return Err(Error::InvalidSize(DESCRIPTOR_LEN, buf.len()));
         }
 
         // Reserved bytes must be zero

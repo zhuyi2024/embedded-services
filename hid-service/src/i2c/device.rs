@@ -3,7 +3,7 @@ use core::cell::{Cell, RefCell};
 
 use embedded_hal_async::i2c::{AddressMode, I2c};
 use embedded_services::buffer::*;
-use embedded_services::hid::{DeviceContainer, Response};
+use embedded_services::hid::{DeviceContainer, Opcode, Response};
 use embedded_services::{error, hid, info, trace};
 
 use crate::Error;
@@ -111,10 +111,11 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         let mut borrow = self.buffer.borrow_mut();
         let buf: &mut [u8] = borrow.borrow_mut();
 
+        let opcode: Opcode = cmd.into();
         let res = cmd.encode_into_slice(
             buf,
             Some(self.device.regs.command_reg),
-            if cmd.opcode().has_response() || cmd.opcode().requires_host_data() {
+            if opcode.has_response() || opcode.requires_host_data() {
                 Some(self.device.regs.data_reg)
             } else {
                 None
@@ -132,7 +133,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
             return Err(Error::Bus(e));
         }
 
-        if cmd.opcode().has_response() {
+        if opcode.has_response() {
             trace!("Reading host data");
             if let Err(e) = bus.read(self.address, buf).await {
                 error!("Failed to read host data");

@@ -6,6 +6,7 @@ pub use device::*;
 pub use host::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Command {
     Probe,
     Write,
