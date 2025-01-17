@@ -90,6 +90,26 @@ This houses common EC service utilities to build a service. It includes:
 - instrusive-list that allows dynamic number of subscribers and publishers for a service
 - transport (IPC) logic that allows EC services to talk to each other
 
+#### transport (IPC)
+
+Protocol agnostric transport allowing dynamic number of endpoints to send and receive message. It makes use of the instrusive list to allow dynamic number of endpoints corresponding to each endpoint ID.
+
+```mermaid
+    erDiagram
+        service_a ||..|| endpoint_a :contains
+        endpoint_a ||..|| transport : send_message
+        transport ||--|{ endpoint_b : route
+        service_b ||..|| endpoint_b :contains
+        transport {
+            list endpoint_a
+            list endpoint_b
+            list endpoint_c
+        }
+
+```
+
+Message are opaque pointer to a Rust object, so it literally can be anything.
+
 ### Individual services
 
 Services will be separate crates in this repo. Each service crate will be implementation of the interfaces for a functional area.
