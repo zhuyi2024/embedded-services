@@ -1,10 +1,12 @@
-# Overview
+# EC Services
+
+## Overview
 
 EC service is where the business logic glues the HAL + common EC functional traits + EC peripheral driver together.
 
-# Building Blocks
+## Building Blocks
 
-## MCU Platform HAL
+### MCU Platform HAL
 
 Hardware specific HAL leveraging Rust Async framework
 
@@ -13,7 +15,6 @@ Hardware specific HAL leveraging Rust Async framework
 - Plan to partner with MCU vendor to support more MCU in the future
 
 For example, [embassy-imxrt](https://github.com/pop-project/embassy-imxrt)
-
 
 ```mermaid
         classDiagram
@@ -27,7 +28,7 @@ For example, [embassy-imxrt](https://github.com/pop-project/embassy-imxrt)
             embassy-imxrt: +write()
 ```
 
-## EC Subsystem Platform Abstractions
+### EC Subsystem Platform Abstractions
 
 There are sets of generic Rust traits the define an EC functional subsystem like thermal, USB PD, fan, battery. This abstraction serves to abstract the underlying HW design away from the business logic.
 
@@ -39,7 +40,7 @@ For example, [embedded-sensor](https://github.com/pop-project/embedded-sensors)
         <<interface>> embedded-sensor
 ```
 
-## Rust Based Drivers for EC Peripherals
+### Rust Based Drivers for EC Peripherals
 
 There are MCU platform agnostic Rust drivers for specific HW parts connected to the EC like TMP108 temp sensor.
 
@@ -66,11 +67,12 @@ For example, [tmp108](https://github.com/pop-project/tmp108)
         embassy-imxrt: +write()
 ```
 
-# EC Services
+## EC Services Repo
 
 EC service houses the business logic that glues the EC peripheral Rust driver + EC subsystem platform abstraction + MC platform HAL together/.
 
-# Repo Organization
+## Repo Organization
+
 - embedded-services repo
   - embedded-services library crate
     - service traits
@@ -81,14 +83,14 @@ EC service houses the business logic that glues the EC peripheral Rust driver + 
 - hid-service
   - library crate
 
-
-## embedded-services
+### embedded-services
 
 This houses common EC service utilities to build a service. It includes:
+
 - instrusive-list that allows dynamic number of subscribers and publishers for a service
 - transport (IPC) logic that allows EC services to talk to each other
 
-## Individual services
+### Individual services
 
 Services will be separate crates in this repo. Each service crate will be implementation of the interfaces for a functional area.
 
@@ -115,15 +117,15 @@ For example, temperature_service
         embassy-imxrt: +write()
 ```
 
-### hid-service
+#### hid-service
 
 HID over I2c transport
 
-### power-button-service
+#### power-button-service
 
 Service to manage a power button
 
-### espi-service
+#### espi-service
 
 Provide eSPI transport, similar to traditional x86 EC, a memory map table of information will be maintained.
 
@@ -136,7 +138,7 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
     }
 ```
 
-#### read operation
+##### read operation
 
 ```mermaid
     sequenceDiagram
@@ -150,7 +152,7 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
 - service periodically update their table entries by sending a message throught transport to espi_service
 - host eSPI peripheral channel read always gets the cached value
 
-#### write operation
+##### write operation
 
 ```mermaid
     sequenceDiagram
@@ -167,13 +169,13 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
 - after bus operation is done, battery service notifies espi_service
 - espi_service updates the memory table and optionally can notify the host
 
-# EC Top-Level
+## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
 
 Sets of services can be grouped into subsystem. For instance, thermal subsystem will consist of temperature-service + fan-service + battery-service + debug-service + host-comm-service. The service talks to each other through the transport (IPC) layer. An EC service can also be shared between different subsystems. For instance, debug-service will subcribe to debug messages from other services.
 
-```
+``` Rust
 async fn (spawner: Spawner) {
     //initialize HW peripheral and system level managemetn
     spawn(services(periphal, configuration))
@@ -181,8 +183,10 @@ async fn (spawner: Spawner) {
 }
 ```
 
-## Example: Simplified Layer of Subsystem + Services
+### Example: Simplified Layer of Subsystem + Services
+
 ![Simplified Layer View](docs/images/simplified_layers.png "Simplified Layered View of Services")
 
-## Example: E2E of Keyboard over eSPI
+### Example: E2E of Keyboard over eSPI
+
 ![Keyboard to Host via eSPI Example](docs/images/keyboard_to_espi_example.png "Keyboard to Host via eSPI Example")
