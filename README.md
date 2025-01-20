@@ -189,6 +189,25 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
 - after bus operation is done, battery service notifies espi_service
 - espi_service updates the memory table and optionally can notify the host
 
+#### nvm-service (planned)
+
+```mermaid
+    classDiagram
+        nvm-service --> embedded-storage
+        embedded-storage <|-- FlexSPI
+        embedded-storage <|-- SPI
+
+        <<interface>> embedded-storage
+        class FlexSPI["embassy-imxrt FlexSPI HAL"]
+        class SPI["embassy-imxrt SPI HAL"]
+```
+
+- nvm-service
+  - embedded-nvm (generic, would prefer to have filesystem features like error checking and file structures)
+    - embedded-storage
+      - FlexSPI
+      - SPI
+
 ## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
