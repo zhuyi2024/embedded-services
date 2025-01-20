@@ -208,6 +208,20 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
       - FlexSPI
       - SPI
 
+#### rtc-service (planned)
+
+```mermaid
+    classDiagram
+        rtc-service --> embedded-rtc
+        embedded-rtc <|-- RTC
+        <<interface>> embedded-rtc
+        class RTC["embassy-imxrt RTC HAL"]
+```
+
+- rtc-service
+  - embedded-rtc 
+    - embassy-imxrt RTC HAL
+
 ## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
