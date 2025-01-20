@@ -222,6 +222,28 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
   - embedded-rtc 
     - embassy-imxrt RTC HAL
 
+#### thermal-service (planned)
+
+```mermaid
+    classDiagram
+        thermal-service --> embedded-fan
+        thermal-service --> embedded-sensor
+        embedded-sensor <|-- sensor-driver
+        embedded-fan <|-- fan-driver
+        <<interface>> embedded-fan
+        <<interface>> embedded-sensor
+        sensor-driver --> embedded-hal
+        fan-driver --> embedded-timer
+        <<interface>> embedded-hal
+        <<interface>> embedded-timer
+```
+
+- thermal-service
+  - embedded-sensor
+    - product specific sensor driver
+  - embedded-fan
+    - product specific fan driver
+
 ## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
