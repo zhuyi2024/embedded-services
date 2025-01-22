@@ -1,4 +1,4 @@
-//! Transport Service Definitions
+//! Comms Service Definitions
 
 use core::any::{Any, TypeId};
 use core::cell::Cell;
@@ -57,7 +57,7 @@ pub enum Internal {
     Oem(OemKey),
 }
 
-/// External identifier for transport routing
+/// External identifier for routing
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum External {
@@ -71,10 +71,10 @@ pub enum External {
     Oem(OemKey),
 }
 
-/// Endpoint identifier for transport routing
+/// Endpoint identifier for routing
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum Endpoint {
+pub enum EndpointID {
     /// route to/from an internal source
     Internal(Internal),
 
@@ -82,15 +82,15 @@ pub enum Endpoint {
     External(External),
 }
 
-impl From<Internal> for Endpoint {
+impl From<Internal> for EndpointID {
     fn from(value: Internal) -> Self {
-        Endpoint::Internal(value)
+        EndpointID::Internal(value)
     }
 }
 
-impl From<External> for Endpoint {
+impl From<External> for EndpointID {
     fn from(value: External) -> Self {
-        Endpoint::External(value)
+        EndpointID::External(value)
     }
 }
 
@@ -136,77 +136,77 @@ impl<'a> Data<'a> {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Message<'a> {
     /// where this message came from
-    pub from: Endpoint,
+    pub from: EndpointID,
 
     /// where this message is going
-    pub to: Endpoint,
+    pub to: EndpointID,
 
     /// message content
     pub data: Data<'a>,
 }
 
-/// Receive trait for Registration implementers
-pub trait MessageDelegate {
+/// Trait to receive messages
+pub trait MailboxDelegate {
     /// Receive a Message (typically, push contents to queue or queue some action)
-    fn process(&self, message: &Message);
+    fn receive(&self, message: &Message);
 }
 
-/// Primary node registration for receiving messages from the transport service
-pub struct EndpointLink {
+/// Primary node registration for receiving messages from the comms service
+pub struct Endpoint {
     node: Node,
-    who: Endpoint,
-    delegator: Cell<Option<&'static dyn MessageDelegate>>,
+    id: EndpointID,
+    delegator: Cell<Option<&'static dyn MailboxDelegate>>,
 }
 
-impl NodeContainer for EndpointLink {
+impl NodeContainer for Endpoint {
     fn get_node(&self) -> &Node {
         &self.node
     }
 }
 
-impl EndpointLink {
+impl Endpoint {
+    /// Get endpoint ID
+    pub fn get_id(&self) -> EndpointID {
+        self.id
+    }
+
     /// use this when static initialization occurs, internal fields will be validated in register_subscriber() later
-    pub const fn uninit(who_am_i: Endpoint) -> Self {
+    pub const fn uninit(id: EndpointID) -> Self {
         Self {
             node: Node::uninit(),
-            who: who_am_i,
+            id: id,
             delegator: Cell::new(None),
         }
     }
 
-    /// Send a generic message to a Target
-    pub async fn send(&self, to: Endpoint, data: &impl Any) -> Result<(), Infallible> {
-        route(Message {
-            from: self.who,
-            to,
-            data: Data::new(data),
-        })
-        .await
+    /// Send a generic message to an endpoint
+    pub async fn send(&self, to: EndpointID, data: &impl Any) -> Result<(), Infallible> {
+        send(self.id, to, data).await
     }
 
-    fn init(&self, rx: &'static dyn MessageDelegate) {
+    fn init(&self, rx: &'static dyn MailboxDelegate) {
         self.delegator.set(Some(rx));
     }
 
     fn process(&self, message: &Message) {
         if let Some(delegator) = self.delegator.get() {
-            delegator.process(message);
+            delegator.receive(message);
         }
     }
 }
 
-/// initialize receiver/transport node for message handling
+/// initialize receiver node for message handling
 pub async fn register_endpoint(
-    this: &'static impl MessageDelegate,
-    node: &'static EndpointLink,
+    this: &'static impl MailboxDelegate,
+    node: &'static Endpoint,
 ) -> Result<(), intrusive_list::Error> {
     node.init(this);
-    get_list(node.who).get().await.push(node)
+    get_list(node.id).get().await.push(node)
 }
 
-fn get_list(target: Endpoint) -> &'static OnceLock<IntrusiveList> {
+fn get_list(target: EndpointID) -> &'static OnceLock<IntrusiveList> {
     match target {
-        Endpoint::External(ext_endpoint) => match ext_endpoint {
+        EndpointID::External(ext_endpoint) => match ext_endpoint {
             External::Host => {
                 static EXTERNAL_HOST: OnceLock<IntrusiveList> = OnceLock::new();
                 &EXTERNAL_HOST
@@ -220,7 +220,7 @@ fn get_list(target: Endpoint) -> &'static OnceLock<IntrusiveList> {
                 &EXTERNAL_OEM
             }
         },
-        Endpoint::Internal(int_endpoint) => {
+        EndpointID::Internal(int_endpoint) => {
             use Internal::*;
 
             static INTERNAL_LIST_PLATFORM_INFO: OnceLock<IntrusiveList> = OnceLock::new();
@@ -256,13 +256,23 @@ fn get_list(target: Endpoint) -> &'static OnceLock<IntrusiveList> {
     }
 }
 
+/// Send a generic message to an endpoint
+pub async fn send(from: EndpointID, to: EndpointID, data: &impl Any) -> Result<(), Infallible> {
+    route(Message {
+        from: from,
+        to,
+        data: Data::new(data),
+    })
+    .await
+}
+
 /// route a message to any valid receiver nodes
-pub async fn route(message: Message<'_>) -> Result<(), Infallible> {
+async fn route(message: Message<'_>) -> Result<(), Infallible> {
     let list = get_list(message.to).get().await;
 
     for rxq in list {
-        if let Some(endpoint) = rxq.data::<EndpointLink>() {
-            if message.to == endpoint.who {
+        if let Some(endpoint) = rxq.data::<Endpoint>() {
+            if message.to == endpoint.id {
                 endpoint.process(&message);
             }
         }

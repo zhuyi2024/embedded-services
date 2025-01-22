@@ -5,7 +5,7 @@ use embassy_sync::once_lock::OnceLock;
 use embassy_time::Timer;
 use embedded_services::buffer::*;
 use embedded_services::define_static_buffer;
-use embedded_services::transport::{self, Endpoint, External, Internal};
+use embedded_services::comms::{self, EndpointID, External, Internal};
 use log::*;
 use static_cell::StaticCell;
 
@@ -13,14 +13,14 @@ mod sender {
     use super::*;
 
     pub struct Sender {
-        pub tp: transport::EndpointLink,
+        pub tp: comms::Endpoint,
         buffer: OwnedRef<'static, u8>,
     }
 
     impl Sender {
         pub fn new(buffer: OwnedRef<'static, u8>) -> Self {
             Self {
-                tp: transport::EndpointLink::uninit(Endpoint::External(External::Host)),
+                tp: comms::Endpoint::uninit(EndpointID::External(External::Host)),
                 buffer,
             }
         }
@@ -38,14 +38,14 @@ mod sender {
             }
 
             self.tp
-                .send(Endpoint::Internal(Internal::Oem(0)), &self.buffer.reference())
+                .send(EndpointID::Internal(Internal::Oem(0)), &self.buffer.reference())
                 .await
                 .unwrap();
         }
     }
 
-    impl transport::MessageDelegate for Sender {
-        fn process(&self, _message: &transport::Message) {}
+    impl comms::MailboxDelegate for Sender {
+        fn receive(&self, _message: &comms::Message) {}
     }
 }
 
@@ -53,19 +53,19 @@ mod receiver {
     use super::*;
 
     pub struct Receiver {
-        pub tp: transport::EndpointLink,
+        pub tp: comms::Endpoint,
     }
 
     impl Receiver {
         pub fn new() -> Self {
             Self {
-                tp: transport::EndpointLink::uninit(Endpoint::Internal(Internal::Oem(0))),
+                tp: comms::Endpoint::uninit(EndpointID::Internal(Internal::Oem(0))),
             }
         }
     }
 
-    impl transport::MessageDelegate for Receiver {
-        fn process(&self, message: &transport::Message) {
+    impl comms::MailboxDelegate for Receiver {
+        fn receive(&self, message: &comms::Message) {
             if let Some(data) = message.data.get::<SharedRef<'_, u8>>() {
                 let borrow = data.borrow();
                 let data: &[u8] = borrow.borrow();
@@ -87,10 +87,10 @@ async fn task() {
     embedded_services::init().await;
 
     info!("Registering sender endpoint");
-    transport::register_endpoint(sender, &sender.tp).await.unwrap();
+    comms::register_endpoint(sender, &sender.tp).await.unwrap();
 
     info!("Registering receiver endpoint");
-    transport::register_endpoint(receiver, &receiver.tp).await.unwrap();
+    comms::register_endpoint(receiver, &receiver.tp).await.unwrap();
 
     loop {
         info!("Sending {}", if even { "even" } else { "odd" });

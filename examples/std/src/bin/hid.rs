@@ -3,39 +3,39 @@ use embassy_sync::once_lock::OnceLock;
 use embassy_time::Timer;
 use embedded_services::{
     hid::{self, DeviceId},
-    transport::{self, Endpoint, Internal},
+    comms::{self, EndpointID, Internal},
 };
 use log::*;
 use static_cell::StaticCell;
 const DEV0_ID: DeviceId = DeviceId(0);
 const DEV1_ID: DeviceId = DeviceId(1);
 struct Host {
-    tp: transport::EndpointLink,
+    tp: comms::Endpoint,
 }
 impl Host {
     fn new() -> Self {
         Host {
-            tp: transport::EndpointLink::uninit(Endpoint::Internal(Internal::Hid)),
+            tp: comms::Endpoint::uninit(EndpointID::Internal(Internal::Hid)),
         }
     }
 }
-impl transport::MessageDelegate for Host {
-    fn process(&self, _message: &transport::Message) {}
+impl comms::MailboxDelegate for Host {
+    fn receive(&self, _message: &comms::Message) {}
 }
 struct Device {
-    tp: transport::EndpointLink,
+    tp: comms::Endpoint,
     id: DeviceId,
 }
 impl Device {
     fn new(id: DeviceId) -> Self {
         Device {
-            tp: transport::EndpointLink::uninit(Endpoint::Internal(Internal::Hid)),
+            tp: comms::Endpoint::uninit(EndpointID::Internal(Internal::Hid)),
             id,
         }
     }
 }
-impl transport::MessageDelegate for Device {
-    fn process(&self, message: &transport::Message) {
+impl comms::MailboxDelegate for Device {
+    fn receive(&self, message: &comms::Message) {
         let message = message.data.get::<hid::Message>();
         if message.is_none() {
             return;
@@ -51,7 +51,7 @@ async fn host() {
     static HOST: OnceLock<Host> = OnceLock::new();
     let this = HOST.get_or_init(|| Host::new());
     info!("Registering host endpoint");
-    transport::register_endpoint(this, &this.tp).await.unwrap();
+    comms::register_endpoint(this, &this.tp).await.unwrap();
     loop {
         info!("Sending message");
         hid::send_request(&this.tp, DEV0_ID, hid::Request::Descriptor)
@@ -70,10 +70,10 @@ async fn run(spawner: Spawner) {
     embedded_services::init().await;
     info!("Registering device 0 endpoint");
     let dev0 = DEVICE0.get_or_init(|| Device::new(DEV0_ID));
-    transport::register_endpoint(dev0, &dev0.tp).await.unwrap();
+    comms::register_endpoint(dev0, &dev0.tp).await.unwrap();
     info!("Registering device 1 endpoint");
     let dev1 = DEVICE1.get_or_init(|| Device::new(DEV1_ID));
-    transport::register_endpoint(dev1, &dev1.tp).await.unwrap();
+    comms::register_endpoint(dev1, &dev1.tp).await.unwrap();
     info!("Spawning host task");
     spawner.spawn(host()).unwrap();
 }
