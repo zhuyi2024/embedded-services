@@ -141,6 +141,28 @@ For example, temperature_service
 
 HID over I2c transport
 
+```mermaid
+    classDiagram
+        keyboard-service --> embedded-keyboard-rs
+        keyboard-service --> embedded-hid
+        touchpad-service --> passthrough-service
+        passthrough-service --> embedded-hid
+        passthrough-service --> i2c-host-service
+        passthrough-service --> i2c-device-service
+```
+
+- keyboard-service
+  - embedded-keyboard-rs
+  - embedded-hid
+
+- touchpad-service
+  - passthrough-service
+    - embedded-hid
+    - i2c-host-service
+    - i2c-device-service
+
+
+
 #### power-button-service
 
 Service to manage a power button
@@ -188,6 +210,98 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
 - battery service performs the bus operation to update the charge threshold on the charge
 - after bus operation is done, battery service notifies espi_service
 - espi_service updates the memory table and optionally can notify the host
+
+#### nvm-service (planned)
+
+```mermaid
+    classDiagram
+        nvm-service --> embedded-storage
+        embedded-storage <|-- FlexSPI
+        embedded-storage <|-- SPI
+
+        <<interface>> embedded-storage
+        class FlexSPI["embassy-imxrt FlexSPI HAL"]
+        class SPI["embassy-imxrt SPI HAL"]
+```
+
+- nvm-service
+  - embedded-nvm (generic, would prefer to have filesystem features like error checking and file structures)
+    - embedded-storage
+      - FlexSPI
+      - SPI
+
+#### rtc-service (planned)
+
+```mermaid
+    classDiagram
+        rtc-service --> embedded-rtc
+        embedded-rtc <|-- RTC
+        <<interface>> embedded-rtc
+        class RTC["embassy-imxrt RTC HAL"]
+```
+
+- rtc-service
+  - embedded-rtc 
+    - embassy-imxrt RTC HAL
+
+#### thermal-service (planned)
+
+```mermaid
+    classDiagram
+        thermal-service --> embedded-fan
+        thermal-service --> embedded-sensor
+        embedded-sensor <|-- sensor-driver
+        embedded-fan <|-- fan-driver
+        <<interface>> embedded-fan
+        <<interface>> embedded-sensor
+        sensor-driver --> embedded-hal
+        fan-driver --> embedded-timer
+        <<interface>> embedded-hal
+        <<interface>> embedded-timer
+```
+
+- thermal-service
+  - embedded-sensor
+    - product specific sensor driver
+  - embedded-fan
+    - product specific fan driver
+
+#### cfu-service (planned)
+
+```mermaid
+    classDiagram
+        cfu-service --> embedded-cfu
+        cfu-service --> embedded-hal
+        cfu-service --> embedded-storage
+```
+
+- cfu-service
+  - embedded-cfu
+  - embedded-hal
+  - embedded-storage
+
+#### battery-service (planned)
+
+```mermaid
+    classDiagram
+        battery-service --> embedded-battery
+        battery-service --> embedded-charger
+```
+
+- battery-service
+  - embedded-battery
+  - embedded-charger
+
+#### usb-c-service (planned)
+
+```mermaid
+    classDiagram
+        usb-c-service --> embedded-usb-pd
+```
+
+
+- usb-c-service
+  - embedded-usb-pd
 
 ## EC Top-Level
 
