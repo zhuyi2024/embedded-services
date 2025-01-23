@@ -258,6 +258,29 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
   - embedded-hal
   - embedded-storage
 
+#### battery-service (planned)
+
+```mermaid
+    classDiagram
+        battery-service --> embedded-battery
+        battery-service --> embedded-charger
+```
+
+- battery-service
+  - embedded-battery
+  - embedded-charger
+
+#### usb-c-service (planned)
+
+```mermaid
+    classDiagram
+        usb-c-service --> embedded-usb-pd
+```
+
+
+- usb-c-service
+  - embedded-usb-pd
+
 ## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
