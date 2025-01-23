@@ -141,6 +141,28 @@ For example, temperature_service
 
 HID over I2c transport
 
+```mermaid
+    classDiagram
+        keyboard-service --> embedded-keyboard-rs
+        keyboard-service --> embedded-hid
+        touchpad-service --> passthrough-service
+        passthrough-service --> embedded-hid
+        passthrough-service --> i2c-host-service
+        passthrough-service --> i2c-device-service
+```
+
+- keyboard-service
+  - embedded-keyboard-rs
+  - embedded-hid
+
+- touchpad-service
+  - passthrough-service
+    - embedded-hid
+    - i2c-host-service
+    - i2c-device-service
+
+
+
 #### power-button-service
 
 Service to manage a power button
