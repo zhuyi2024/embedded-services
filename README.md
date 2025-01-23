@@ -244,6 +244,20 @@ Provide eSPI transport, similar to traditional x86 EC, a memory map table of inf
   - embedded-fan
     - product specific fan driver
 
+#### cfu-service (planned)
+
+```mermaid
+    classDiagram
+        cfu-service --> embedded-cfu
+        cfu-service --> embedded-hal
+        cfu-service --> embedded-storage
+```
+
+- cfu-service
+  - embedded-cfu
+  - embedded-hal
+  - embedded-storage
+
 ## EC Top-Level
 
 At the top-level, a EC is an aggregate of service.
