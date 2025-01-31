@@ -5,7 +5,7 @@ use embedded_hal_async::digital::Wait;
 
 use super::button::Button;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 /// Enum representing the different types of messages that can be sent by the button.
 pub enum Message {
     /// Button pressed for long duration.
