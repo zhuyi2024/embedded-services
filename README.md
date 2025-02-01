@@ -14,7 +14,7 @@ Hardware specific HAL leveraging Rust Async framework
 - Desire is for HALs to be open-sourced and upstreamed to Embassy main repo
 - Plan to partner with MCU vendor to support more MCU in the future
 
-For example, [embassy-imxrt](https://github.com/pop-project/embassy-imxrt)
+For example, [embassy-imxrt](https://github.com/OpenDevicePartnership/embassy-imxrt)
 
 ```mermaid
         classDiagram
@@ -32,7 +32,7 @@ For example, [embassy-imxrt](https://github.com/pop-project/embassy-imxrt)
 
 There are sets of generic Rust traits the define an EC functional subsystem like thermal, USB PD, fan, battery. This abstraction serves to abstract the underlying HW design away from the business logic.
 
-For example, [embedded-sensor](https://github.com/pop-project/embedded-sensors)
+For example, [embedded-sensor](https://github.com/OpenDevicePartnership/embedded-sensors)
 
 ```mermaid
     classDiagram
@@ -48,7 +48,7 @@ There are MCU platform agnostic Rust drivers for specific HW parts connected to 
 - Implements a EC function platform abstraction traits like `embedded-sensor`, `embedded-battery`, `embedded-fan`
 - Plan to partner with vendor to open-source these drivers
 
-For example, [tmp108](https://github.com/pop-project/tmp108)
+For example, [tmp108](https://github.com/OpenDevicePartnership/tmp108)
 
 ```mermaid
     classDiagram

@@ -3,7 +3,7 @@ name = "hid-service"
 version = "0.1.0"
 edition = "2021"
 description = "HID embedded service implementation"
-repository = "https://github.com/pop-project/embedded-services"
+repository = "https://github.com/OpenDevicePartnership/embedded-services"
 rust-version = "1.83"
 license = "MIT"
 

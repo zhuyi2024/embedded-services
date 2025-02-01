@@ -2,7 +2,7 @@
 
 ## Introduction
 
-These examples illustrates how to use the embassy-services for IPC, OEM customization, and feature extension.
+These examples illustrate how to use the embassy-services for IPC, OEM customization, and feature extension.
 
 ## Adding Examples
 Add uniquely named example to `src/bin` like `keyboard.rs`
