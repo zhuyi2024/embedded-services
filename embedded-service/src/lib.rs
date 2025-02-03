@@ -22,4 +22,5 @@ pub async fn init() {
     activity::init();
     hid::init();
     keyboard::init();
+    power::policy::init();
 }
