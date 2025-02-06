@@ -34,12 +34,6 @@ pub enum InternalResponseData {
     Complete,
 }
 
-impl Into<Result<InternalResponseData, Error>> for InternalResponseData {
-    fn into(self) -> Result<InternalResponseData, Error> {
-        Ok(self)
-    }
-}
-
 /// Response for controller-specific commands
 pub type InternalResponse = Result<InternalResponseData, Error>;
 
