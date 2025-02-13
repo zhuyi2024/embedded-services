@@ -173,7 +173,7 @@ jobs:
       # intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
       # --feature-powerset runs for every combination of features
       - name: cargo hack
-        run: cargo hack --feature-powerset check
+        run: cargo hack --feature-powerset --mutually-exclusive-features=log,defmt check
         working-directory: ${{ matrix.workdir }}
 
   deny:
@@ -230,5 +230,7 @@ jobs:
         with:
           toolchain: ${{ matrix.msrv }}
       - name: cargo +${{ matrix.msrv }} check
-        run: cargo check
+        run: |
+          cargo check -F log
+          cargo check -F defmt
         working-directory: ${{ matrix.workdir }}
