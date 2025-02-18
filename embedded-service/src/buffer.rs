@@ -214,34 +214,31 @@ macro_rules! define_static_buffer {
     ($name:ident, $type:ty, $contents:expr) => {
         mod $name {
             #![allow(dead_code)]
-
-            use ::core::option::Option;
-            use ::core::ptr::addr_of_mut;
-            use ::embassy_sync::once_lock::OnceLock;
-            use $crate::buffer::{Buffer, OwnedRef, SharedRef};
+            use super::*;
 
             const LEN: usize = $contents.len();
-            static BUFFER: OnceLock<Buffer<'static, $type>> = OnceLock::new();
+            static BUFFER: ::embassy_sync::once_lock::OnceLock<$crate::buffer::Buffer<'static, $type>> =
+                ::embassy_sync::once_lock::OnceLock::new();
             static mut BUFFER_STORAGE: [$type; LEN] = $contents;
 
             // SAFETY: The buffer is not externally visible and the constructor closure is only called once
-            fn get_or_init() -> OwnedRef<'static, $type> {
+            fn get_or_init() -> $crate::buffer::OwnedRef<'static, $type> {
                 unsafe {
                     BUFFER
-                        .get_or_init(|| Buffer::new(&mut *addr_of_mut!(BUFFER_STORAGE)))
+                        .get_or_init(|| $crate::buffer::Buffer::new(&mut *::core::ptr::addr_of_mut!(BUFFER_STORAGE)))
                         .as_owned()
                 }
             }
 
-            pub fn get_mut() -> Option<OwnedRef<'static, $type>> {
+            pub fn get_mut() -> ::core::option::Option<$crate::buffer::OwnedRef<'static, $type>> {
                 if BUFFER.try_get().is_none() {
-                    Some(get_or_init())
+                    ::core::option::Option::Some(get_or_init())
                 } else {
-                    None
+                    ::core::option::Option::None
                 }
             }
 
-            pub fn get() -> SharedRef<'static, $type> {
+            pub fn get() -> $crate::buffer::SharedRef<'static, $type> {
                 get_or_init().reference()
             }
 
