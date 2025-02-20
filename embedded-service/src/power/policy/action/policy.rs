@@ -1,3 +1,4 @@
+//! Policy state machine
 use super::*;
 use crate::info;
 use crate::power::policy::{device, Error, PowerCapability};
@@ -6,6 +7,18 @@ use crate::power::policy::{device, Error, PowerCapability};
 pub struct Policy<'a, S: Kind> {
     device: &'a device::Device,
     _state: core::marker::PhantomData<S>,
+}
+
+/// Enum to contain any state
+pub enum AnyState<'a> {
+    /// Detached
+    Detached(Policy<'a, Detached>),
+    /// Idle
+    Idle(Policy<'a, Idle>),
+    /// Connected Consumer
+    ConnectedConsumer(Policy<'a, ConnectedConsumer>),
+    /// Connected Provider
+    ConnectedProvider(Policy<'a, ConnectedProvider>),
 }
 
 impl<'a, S: Kind> Policy<'a, S> {

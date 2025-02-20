@@ -172,7 +172,12 @@ impl ContextToken {
     pub async fn try_policy_action<'a, S: action::Kind>(
         &'a self,
         id: DeviceId,
-    ) -> Result<action::Policy<'a, S>, Error> {
+    ) -> Result<action::policy::Policy<'a, S>, Error> {
         self.get_device(id).await?.try_policy_action().await
+    }
+
+    /// Provide access to current policy actions
+    pub async fn policy_action<'a>(&'a self, id: DeviceId) -> Result<action::policy::AnyState<'a>, Error> {
+        Ok(self.get_device(id).await?.policy_action().await)
     }
 }

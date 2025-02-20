@@ -2,11 +2,8 @@
 //! This modules contains wrapper structs that use type states to enforce the valid actions for each device state
 use super::device::StateKind;
 
-mod device;
-mod policy;
-
-pub use device::*;
-pub use policy::*;
+pub mod device;
+pub mod policy;
 
 trait Sealed {}
 

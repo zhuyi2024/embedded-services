@@ -191,22 +191,63 @@ impl Device {
     }
 
     /// Try to provide access to the device actions for the given state
-    pub async fn try_device_action<'a, S: action::Kind>(&'a self) -> Result<action::Device<'a, S>, Error> {
+    pub async fn try_device_action<'a, S: action::Kind>(&'a self) -> Result<action::device::Device<'a, S>, Error> {
         let state = self.state().await.kind();
         if S::kind() != state {
             return Err(Error::InvalidState(S::kind(), state));
         }
-        Ok(action::Device::new(self))
+        Ok(action::device::Device::new(self))
+    }
+
+    /// Provide access to the current device state
+    pub async fn device_action<'a>(&'a self) -> action::device::AnyState<'a> {
+        match self.state().await.kind() {
+            StateKind::Detached => action::device::AnyState::Detached(action::device::Device::new(self)),
+            StateKind::Idle => action::device::AnyState::Idle(action::device::Device::new(self)),
+            StateKind::ConnectedProvider => {
+                action::device::AnyState::ConnectedProvider(action::device::Device::new(self))
+            }
+            StateKind::ConnectedConsumer => {
+                action::device::AnyState::ConnectedConsumer(action::device::Device::new(self))
+            }
+        }
     }
 
     /// Try to provide access to the policy actions for the given state
     /// Implemented here for lifetime reasons
-    pub(super) async fn try_policy_action<'a, S: action::Kind>(&'a self) -> Result<action::Policy<'a, S>, Error> {
+    pub(super) async fn try_policy_action<'a, S: action::Kind>(
+        &'a self,
+    ) -> Result<action::policy::Policy<'a, S>, Error> {
         let state = self.state().await.kind();
         if S::kind() != state {
             return Err(Error::InvalidState(S::kind(), state));
         }
-        Ok(action::Policy::new(self))
+        Ok(action::policy::Policy::new(self))
+    }
+
+    /// Provide access to the current policy actions
+    /// Implemented here for lifetime reasons
+    pub(super) async fn policy_action<'a>(&'a self) -> action::policy::AnyState<'a> {
+        match self.state().await.kind() {
+            StateKind::Detached => action::policy::AnyState::Detached(action::policy::Policy::new(self)),
+            StateKind::Idle => action::policy::AnyState::Idle(action::policy::Policy::new(self)),
+            StateKind::ConnectedProvider => {
+                action::policy::AnyState::ConnectedProvider(action::policy::Policy::new(self))
+            }
+            StateKind::ConnectedConsumer => {
+                action::policy::AnyState::ConnectedConsumer(action::policy::Policy::new(self))
+            }
+        }
+    }
+
+    /// Detach the device, this action is available in all states
+    pub async fn detach<'a>(&'a self) -> Result<action::device::Device<'a, action::Detached>, Error> {
+        match self.device_action().await {
+            action::device::AnyState::Detached(state) => Ok(state),
+            action::device::AnyState::Idle(state) => state.detach().await,
+            action::device::AnyState::ConnectedProvider(state) => state.detach().await,
+            action::device::AnyState::ConnectedConsumer(state) => state.detach().await,
+        }
     }
 }
 
