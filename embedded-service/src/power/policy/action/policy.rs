@@ -21,6 +21,18 @@ pub enum AnyState<'a> {
     ConnectedProvider(Policy<'a, ConnectedProvider>),
 }
 
+impl<'a> AnyState<'a> {
+    /// Return the kind of the contained state
+    pub fn kind(&self) -> StateKind {
+        match self {
+            AnyState::Detached(_) => StateKind::Detached,
+            AnyState::Idle(_) => StateKind::Idle,
+            AnyState::ConnectedConsumer(_) => StateKind::ConnectedConsumer,
+            AnyState::ConnectedProvider(_) => StateKind::ConnectedProvider,
+        }
+    }
+}
+
 impl<'a, S: Kind> Policy<'a, S> {
     /// Create a new state machine
     pub(crate) fn new(device: &'a device::Device) -> Self {
@@ -35,7 +47,9 @@ impl<'a, S: Kind> Policy<'a, S> {
         self.device
             .execute_device_request(device::RequestData::Disconnect)
             .await?
-            .complete_or_err()
+            .complete_or_err()?;
+        self.device.set_state(device::State::Idle).await;
+        Ok(())
     }
 }
 

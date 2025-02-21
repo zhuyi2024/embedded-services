@@ -21,6 +21,18 @@ pub enum AnyState<'a> {
     ConnectedProvider(Device<'a, ConnectedProvider>),
 }
 
+impl<'a> AnyState<'a> {
+    /// Return the kind of the contained state
+    pub fn kind(&self) -> StateKind {
+        match self {
+            AnyState::Detached(_) => StateKind::Detached,
+            AnyState::Idle(_) => StateKind::Idle,
+            AnyState::ConnectedConsumer(_) => StateKind::ConnectedConsumer,
+            AnyState::ConnectedProvider(_) => StateKind::ConnectedProvider,
+        }
+    }
+}
+
 impl<'a, S: Kind> Device<'a, S> {
     /// Create a new state machine
     pub(crate) fn new(device: &'a device::Device) -> Self {
