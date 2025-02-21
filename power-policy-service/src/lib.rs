@@ -10,6 +10,7 @@ use embedded_services::{comms, error, info};
 
 /// State of the current consumer
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 struct ConsumerState {
     /// The ID of the currently connected consumer
     device_id: DeviceId,
