@@ -197,6 +197,7 @@ impl PowerPolicy {
         let best_consumer = self.find_highest_power_consumer().await?;
         info!("Best consumer: {:#?}", best_consumer);
         if best_consumer.is_none() {
+            state.current_consumer_state = None;
             // No new consumer available
             return Ok(());
         }
