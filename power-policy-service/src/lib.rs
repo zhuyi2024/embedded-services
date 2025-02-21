@@ -69,14 +69,14 @@ impl PowerPolicy {
     }
 
     async fn process_notify_detach(&self) -> Result<(), Error> {
-        self.update_current_consumer().await?;
         self.context.send_response(Ok(policy::ResponseData::Complete)).await;
+        self.update_current_consumer().await?;
         Ok(())
     }
 
     async fn process_notify_consumer_power_capability(&self) -> Result<(), Error> {
-        self.update_current_consumer().await?;
         self.context.send_response(Ok(policy::ResponseData::Complete)).await;
+        self.update_current_consumer().await?;
         Ok(())
     }
 
@@ -86,8 +86,8 @@ impl PowerPolicy {
     }
 
     async fn process_notify_disconnect(&self) -> Result<(), Error> {
-        self.update_current_consumer().await?;
         self.context.send_response(Ok(policy::ResponseData::Complete)).await;
+        self.update_current_consumer().await?;
         Ok(())
     }
 
