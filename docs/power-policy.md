@@ -17,6 +17,7 @@ Each device can be in one of the following states (`device::State`):
 
 ```mermaid
 stateDiagram-v2
+    Detached --> Detached
     Detached --> Idle : NotifyAttach
     Idle --> Consumer : ConnectConsumer
     Idle --> Provider : ConnectProvider
