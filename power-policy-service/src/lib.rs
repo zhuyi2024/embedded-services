@@ -161,7 +161,7 @@ impl PowerPolicy {
             }
 
             self.comms_notify(CommsMessage {
-                data: CommsData::ConsumerConnected(current_consumer.device_id, new_consumer.power_capability),
+                data: CommsData::ConsumerDisconnected(current_consumer.device_id),
             })
             .await;
         }
