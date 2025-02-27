@@ -10,6 +10,7 @@ pub use intrusive_list::*;
 pub mod activity;
 pub mod buffer;
 pub mod comms;
+pub mod ec_type;
 pub mod fmt;
 pub mod hid;
 pub mod keyboard;
