@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", version = "0.6.0", features = [
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", features = [
     "log",
 ] }
 embassy-time-driver = { git = "https://github.com/embassy-rs/embassy", optional = true }
