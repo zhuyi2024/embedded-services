@@ -37,17 +37,17 @@ pub trait Controller {
 
 /// Takes an implementation of the `Controller` trait and wraps it with logic to handle
 /// message passing and power-policy integration.
-pub struct ControllerWrapper<const N: usize, C: Controller> {
+pub struct ControllerWrapper<'a, const N: usize, C: Controller> {
     /// PD controller to interface with PD service
-    pd_controller: controller::Device,
+    pd_controller: controller::Device<'a>,
     /// Power policy devices to interface with power policy service
     power: [policy::device::Device; N],
     controller: RefCell<C>,
 }
 
-impl<const N: usize, C: Controller> ControllerWrapper<N, C> {
+impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
     /// Create a new controller wrapper
-    pub fn new(pd_controller: controller::Device, power: [policy::device::Device; N], controller: C) -> Self {
+    pub fn new(pd_controller: controller::Device<'a>, power: [policy::device::Device; N], controller: C) -> Self {
         Self {
             pd_controller,
             power,
@@ -56,7 +56,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<N, C> {
     }
 
     /// Return the power device for the given port
-    fn get_power_device<'a>(&'a self, port: LocalPortId) -> Result<&'a policy::device::Device, Error<C::BusError>> {
+    fn get_power_device<'b>(&'b self, port: LocalPortId) -> Result<&'b policy::device::Device, Error<C::BusError>> {
         if port.0 > N as u8 {
             return PdError::InvalidPort.into();
         }

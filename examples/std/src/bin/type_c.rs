@@ -16,25 +16,25 @@ const POWER0: power::policy::DeviceId = power::policy::DeviceId(0);
 mod test_controller {
     use super::*;
 
-    pub struct Controller {
-        pub controller: controller::Device,
+    pub struct Controller<'a> {
+        pub controller: controller::Device<'a>,
         pub power_policy: power::policy::device::Device,
     }
 
-    impl controller::DeviceContainer for Controller {
+    impl controller::DeviceContainer for Controller<'_> {
         fn get_pd_controller_device(&self) -> &controller::Device {
             &self.controller
         }
     }
 
-    impl power::policy::device::DeviceContainer for Controller {
+    impl power::policy::device::DeviceContainer for Controller<'_> {
         fn get_power_policy_device(&self) -> &power::policy::device::Device {
             &self.power_policy
         }
     }
 
-    impl Controller {
-        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &[PortId]) -> Result<Self, Error> {
+    impl<'a> Controller<'a> {
+        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &'a [PortId]) -> Result<Self, Error> {
             Ok(Self {
                 controller: controller::Device::new(id, ports)?,
                 power_policy: power::policy::device::Device::new(power_id),

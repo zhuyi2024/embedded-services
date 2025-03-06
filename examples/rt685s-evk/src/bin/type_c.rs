@@ -112,16 +112,12 @@ async fn main(spawner: Spawner) {
     info!("Spawining interrupt task");
     spawner.must_spawn(interrupt_task(int_in, interrupt));
 
+    static PD_PORTS: [GlobalPortId; 2] = [PORT0_ID, PORT1_ID];
+
     info!("Spawining PD controller task");
     static PD_CONTROLLER: OnceLock<Wrapper> = OnceLock::new();
     let pd_controller = PD_CONTROLLER.get_or_init(|| {
-        tps6699x_driver::tps66994(
-            tps6699x,
-            CONTROLLER0_ID,
-            [PORT0_ID, PORT1_ID],
-            [PORT0_PWR_ID, PORT1_PWR_ID],
-        )
-        .unwrap()
+        tps6699x_driver::tps66994(tps6699x, CONTROLLER0_ID, &PD_PORTS, [PORT0_PWR_ID, PORT1_PWR_ID]).unwrap()
     });
 
     pd_controller.register().await.unwrap();

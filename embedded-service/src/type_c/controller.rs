@@ -79,32 +79,29 @@ pub enum Response {
     Lpm(lpm::Response),
 }
 
-/// Maximum number of controller ports
-pub const MAX_CONTROLLER_PORTS: usize = 2;
-
 /// PD controller
-pub struct Device {
+pub struct Device<'a> {
     node: intrusive_list::Node,
     id: ControllerId,
-    ports: [GlobalPortId; MAX_CONTROLLER_PORTS],
+    ports: &'a [GlobalPortId],
     num_ports: usize,
     command: Channel<NoopRawMutex, Command, 1>,
     response: Channel<NoopRawMutex, Response, 1>,
 }
 
-impl intrusive_list::NodeContainer for Device {
+impl intrusive_list::NodeContainer for Device<'static> {
     fn get_node(&self) -> &intrusive_list::Node {
         &self.node
     }
 }
 
-impl Device {
+impl<'a> Device<'a> {
     /// Create a new PD controller struct
-    pub fn new(id: ControllerId, ports: &[GlobalPortId]) -> Result<Self, PdError> {
+    pub fn new(id: ControllerId, ports: &'a [GlobalPortId]) -> Result<Self, PdError> {
         Ok(Self {
             node: intrusive_list::Node::uninit(),
             id,
-            ports: ports.try_into().map_err(|_| PdError::InvalidParams)?,
+            ports,
             num_ports: ports.len(),
             command: Channel::new(),
             response: Channel::new(),
@@ -156,11 +153,11 @@ impl Device {
 /// Trait for types that contain a controller struct
 pub trait DeviceContainer {
     /// Get the controller struct
-    fn get_pd_controller_device<'a>(&'a self) -> &'a Device;
+    fn get_pd_controller_device<'a>(&'a self) -> &'a Device<'a>;
 }
 
-impl DeviceContainer for Device {
-    fn get_pd_controller_device<'a>(&'a self) -> &'a Device {
+impl DeviceContainer for Device<'_> {
+    fn get_pd_controller_device<'a>(&'a self) -> &'a Device<'a> {
         self
     }
 }

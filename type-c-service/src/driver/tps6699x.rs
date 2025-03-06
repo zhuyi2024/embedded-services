@@ -7,7 +7,7 @@ use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embedded_hal_async::i2c::I2c;
 use embedded_services::power::policy::{self, PowerCapability};
-use embedded_services::type_c::controller::{self, Contract, PortStatus, MAX_CONTROLLER_PORTS};
+use embedded_services::type_c::controller::{self, Contract, PortStatus};
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::{ControllerId, GlobalPortId};
 use embedded_services::{debug, info, trace, type_c};
@@ -18,21 +18,21 @@ use tps6699x::asynchronous::embassy as tps6699x;
 
 use crate::wrapper::{Controller, ControllerWrapper};
 
-pub struct Tps6699x<'a, M: RawMutex, B: I2c> {
-    port_events: [PortEventKind; MAX_CONTROLLER_PORTS],
+pub struct Tps6699x<'a, const N: usize, M: RawMutex, B: I2c> {
+    port_events: [PortEventKind; N],
     tps6699x: tps6699x::Tps6699x<'a, M, B>,
 }
 
-impl<'a, M: RawMutex, B: I2c> Tps6699x<'a, M, B> {
+impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
     fn new(tps6699x: tps6699x::Tps6699x<'a, M, B>) -> Self {
         Self {
-            port_events: [PortEventKind::NONE; MAX_CONTROLLER_PORTS],
+            port_events: [PortEventKind::NONE; N],
             tps6699x,
         }
     }
 }
 
-impl<'a, M: RawMutex, B: I2c> Controller for Tps6699x<'a, M, B> {
+impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, B> {
     type BusError = B::Error;
 
     /// Wait for an event on any port
@@ -145,20 +145,24 @@ impl<'a, M: RawMutex, B: I2c> Controller for Tps6699x<'a, M, B> {
 }
 
 /// TPS66994 controller wrapper
-pub type Tps66994Wrapper<'a, M, B> = ControllerWrapper<TPS66994_NUM_PORTS, Tps6699x<'a, M, B>>;
+pub type Tps66994Wrapper<'a, M, B> = ControllerWrapper<'a, TPS66994_NUM_PORTS, Tps6699x<'a, TPS66994_NUM_PORTS, M, B>>;
 
 /// TPS66993 controller wrapper
-pub type Tps66993Wrapper<'a, M, B> = ControllerWrapper<TPS66994_NUM_PORTS, Tps6699x<'a, M, B>>;
+pub type Tps66993Wrapper<'a, M, B> = ControllerWrapper<'a, TPS66993_NUM_PORTS, Tps6699x<'a, TPS66993_NUM_PORTS, M, B>>;
 
 /// Create a TPS66994 controller wrapper
 pub fn tps66994<'a, M: RawMutex, B: I2c>(
     controller: tps6699x::Tps6699x<'a, M, B>,
     controller_id: ControllerId,
-    port_ids: [GlobalPortId; TPS66994_NUM_PORTS],
+    port_ids: &'a [GlobalPortId],
     power_ids: [policy::DeviceId; TPS66994_NUM_PORTS],
-) -> Result<ControllerWrapper<TPS66994_NUM_PORTS, Tps6699x<'a, M, B>>, PdError> {
+) -> Result<Tps66994Wrapper<'a, M, B>, PdError> {
+    if port_ids.len() != TPS66994_NUM_PORTS {
+        return Err(PdError::InvalidParams);
+    }
+
     Ok(ControllerWrapper::new(
-        controller::Device::new(controller_id, port_ids.as_slice())?,
+        controller::Device::new(controller_id, port_ids)?,
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
@@ -168,11 +172,15 @@ pub fn tps66994<'a, M: RawMutex, B: I2c>(
 pub fn tps66993<'a, M: RawMutex, B: I2c>(
     controller: tps6699x::Tps6699x<'a, M, B>,
     controller_id: ControllerId,
-    port_ids: [GlobalPortId; TPS66993_NUM_PORTS],
+    port_ids: &'a [GlobalPortId],
     power_ids: [policy::DeviceId; TPS66993_NUM_PORTS],
-) -> Result<ControllerWrapper<TPS66993_NUM_PORTS, Tps6699x<'a, M, B>>, PdError> {
+) -> Result<Tps66993Wrapper<'a, M, B>, PdError> {
+    if port_ids.len() != TPS66993_NUM_PORTS {
+        return Err(PdError::InvalidParams);
+    }
+
     Ok(ControllerWrapper::new(
-        controller::Device::new(controller_id, port_ids.as_slice())?,
+        controller::Device::new(controller_id, port_ids)?,
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
