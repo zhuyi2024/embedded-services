@@ -138,7 +138,8 @@ impl<'a> Device<'a> {
         self.response.send(response).await;
     }
 
-    /// Notify of a port event
+    /// Notify that there are pending events on one or more ports
+    /// Each bit corresponds to a global port ID
     pub async fn notify_ports(&self, events: PortEventFlags) {
         let context = CONTEXT.get().await;
         context.port_events.set(context.port_events.get() | events);
