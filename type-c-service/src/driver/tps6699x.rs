@@ -7,7 +7,7 @@ use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embedded_hal_async::i2c::I2c;
 use embedded_services::power::policy::{self, PowerCapability};
-use embedded_services::type_c::controller::{self, Contract, PortStatus};
+use embedded_services::type_c::controller::{self, Contract, Controller, PortStatus};
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::{ControllerId, GlobalPortId};
 use embedded_services::{debug, info, trace, type_c};
@@ -16,7 +16,7 @@ use embedded_usb_pd::type_c::Current as TypecCurrent;
 use embedded_usb_pd::{Error, PdError, PortId as LocalPortId};
 use tps6699x::asynchronous::embassy as tps6699x;
 
-use crate::wrapper::{Controller, ControllerWrapper};
+use crate::wrapper::ControllerWrapper;
 
 pub struct Tps6699x<'a, const N: usize, M: RawMutex, B: I2c> {
     port_events: [PortEventKind; N],

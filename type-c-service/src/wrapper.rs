@@ -2,38 +2,15 @@
 //! which provides a bridge between various service messages and the actual controller functions.
 use core::array::from_fn;
 use core::cell::RefCell;
-use core::future::Future;
 
 use bitfield::BitMut;
 use embassy_futures::select::{select, select_array, Either};
 use embedded_services::power::policy::device::{RequestData, StateKind};
 use embedded_services::power::policy::{self, action};
-use embedded_services::type_c::controller::{self, Contract, PortStatus};
+use embedded_services::type_c::controller::{self, Contract, Controller, PortStatus};
 use embedded_services::type_c::event::{PortEventFlags, PortEventKind};
 use embedded_services::{error, info, intrusive_list, trace, warn};
 use embedded_usb_pd::{Error, PdError, PortId as LocalPortId};
-
-/// PD controller trait for use with wrapper struct
-pub trait Controller {
-    type BusError;
-
-    /// Returns ports with pending events
-    fn wait_port_event(&mut self) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
-    /// Returns and clears current events for the given port
-    fn clear_port_events(
-        &mut self,
-        port: LocalPortId,
-    ) -> impl Future<Output = Result<PortEventKind, Error<Self::BusError>>>;
-    /// Returns the port status
-    fn get_port_status(&mut self, port: LocalPortId)
-        -> impl Future<Output = Result<PortStatus, Error<Self::BusError>>>;
-    /// Enable or disable sink path
-    fn enable_sink_path(
-        &mut self,
-        port: LocalPortId,
-        enable: bool,
-    ) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
-}
 
 /// Takes an implementation of the `Controller` trait and wraps it with logic to handle
 /// message passing and power-policy integration.

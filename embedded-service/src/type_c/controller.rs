@@ -1,14 +1,15 @@
 //! PD controller related code
 use core::cell::Cell;
+use core::future::Future;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::once_lock::OnceLock;
 use embassy_time::{with_timeout, Duration};
-use embedded_usb_pd::{PdError, PortId as LocalPortId};
+use embedded_usb_pd::{Error, PdError, PortId as LocalPortId};
 
-use super::event::PortEventFlags;
+use super::event::{PortEventFlags, PortEventKind};
 use super::ucsi::lpm;
 use super::{ControllerId, GlobalPortId};
 use crate::intrusive_list;
@@ -161,6 +162,29 @@ impl DeviceContainer for Device<'_> {
     fn get_pd_controller_device<'a>(&'a self) -> &'a Device<'a> {
         self
     }
+}
+
+/// PD controller trait that device drivers may use to integrate with internal messaging system
+pub trait Controller {
+    /// Type of error returned by the bus
+    type BusError;
+
+    /// Returns ports with pending events
+    fn wait_port_event(&mut self) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
+    /// Returns and clears current events for the given port
+    fn clear_port_events(
+        &mut self,
+        port: LocalPortId,
+    ) -> impl Future<Output = Result<PortEventKind, Error<Self::BusError>>>;
+    /// Returns the port status
+    fn get_port_status(&mut self, port: LocalPortId)
+        -> impl Future<Output = Result<PortStatus, Error<Self::BusError>>>;
+    /// Enable or disable sink path
+    fn enable_sink_path(
+        &mut self,
+        port: LocalPortId,
+        enable: bool,
+    ) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
 }
 
 /// Internal context for managing PD controllers
