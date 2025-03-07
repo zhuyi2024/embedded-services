@@ -34,11 +34,11 @@ mod test_controller {
     }
 
     impl<'a> Controller<'a> {
-        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &'a [PortId]) -> Result<Self, Error> {
-            Ok(Self {
-                controller: controller::Device::new(id, ports)?,
+        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &'a [PortId]) -> Self {
+            Self {
+                controller: controller::Device::new(id, ports),
                 power_policy: power::policy::device::Device::new(power_id),
-            })
+            }
         }
 
         async fn process_controller_command(
@@ -87,7 +87,7 @@ async fn controller_task() {
 
     static PORTS: [PortId; 2] = [PORT0, PORT1];
 
-    let controller = CONTROLLER.get_or_init(|| test_controller::Controller::new(CONTROLLER0, POWER0, &PORTS).unwrap());
+    let controller = CONTROLLER.get_or_init(|| test_controller::Controller::new(CONTROLLER0, POWER0, &PORTS));
     controller::register_controller(controller).await.unwrap();
 
     loop {

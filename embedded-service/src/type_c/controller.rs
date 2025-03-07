@@ -98,15 +98,15 @@ impl intrusive_list::NodeContainer for Device<'static> {
 
 impl<'a> Device<'a> {
     /// Create a new PD controller struct
-    pub fn new(id: ControllerId, ports: &'a [GlobalPortId]) -> Result<Self, PdError> {
-        Ok(Self {
+    pub fn new(id: ControllerId, ports: &'a [GlobalPortId]) -> Self {
+        Self {
             node: intrusive_list::Node::uninit(),
             id,
             ports,
             num_ports: ports.len(),
             command: Channel::new(),
             response: Channel::new(),
-        })
+        }
     }
 
     /// Send a command to this controller

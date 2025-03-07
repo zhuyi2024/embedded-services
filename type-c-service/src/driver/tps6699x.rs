@@ -162,7 +162,7 @@ pub fn tps66994<'a, M: RawMutex, B: I2c>(
     }
 
     Ok(ControllerWrapper::new(
-        controller::Device::new(controller_id, port_ids)?,
+        controller::Device::new(controller_id, port_ids),
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
@@ -180,7 +180,7 @@ pub fn tps66993<'a, M: RawMutex, B: I2c>(
     }
 
     Ok(ControllerWrapper::new(
-        controller::Device::new(controller_id, port_ids)?,
+        controller::Device::new(controller_id, port_ids),
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
