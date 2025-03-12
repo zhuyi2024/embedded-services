@@ -1,7 +1,8 @@
 use core::cell::RefCell;
+use core::mem::offset_of;
 
 use embassy_sync::once_lock::OnceLock;
-use embedded_services::comms::{self, EndpointID, External};
+use embedded_services::comms::{self, EndpointID, External, Internal};
 use embedded_services::{ec_type, error, info};
 
 pub struct Service<'a> {
@@ -126,6 +127,78 @@ impl Service<'_> {
             ec_type::message::TimeAlarmMessage::DcTimeVal(dc_time_val) => memory_map.alarm.dc_time_val = *dc_time_val,
         }
     }
+
+    async fn route_to_service(&self, offset: usize, length: usize) -> Result<(), ec_type::Error> {
+        let mut offset = offset;
+        let mut length = length;
+
+        while length > 0 {
+            if offset >= offset_of!(ec_type::structure::ECMemory, batt)
+                && offset < offset_of!(ec_type::structure::ECMemory, therm)
+            {
+                self.route_to_battery_service(&mut offset, &mut length).await?;
+            } else if offset >= offset_of!(ec_type::structure::ECMemory, therm)
+                && offset < offset_of!(ec_type::structure::ECMemory, alarm)
+            {
+                self.route_to_thermal_service(&mut offset, &mut length).await?;
+            } else if offset >= offset_of!(ec_type::structure::ECMemory, alarm) {
+                self.route_to_time_alarm_service(&mut offset, &mut length).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn route_to_battery_service(&self, offset: &mut usize, length: &mut usize) -> Result<(), ec_type::Error> {
+        let msg = {
+            let memory_map = self.ec_memory.borrow();
+            ec_type::mem_map_to_battery_msg(&memory_map, offset, length)?
+        };
+
+        comms::send(
+            EndpointID::External(External::Host),
+            EndpointID::Internal(Internal::Battery),
+            &msg,
+        )
+        .await
+        .unwrap();
+
+        Ok(())
+    }
+
+    async fn route_to_thermal_service(&self, offset: &mut usize, length: &mut usize) -> Result<(), ec_type::Error> {
+        let msg = {
+            let memory_map = self.ec_memory.borrow();
+            ec_type::mem_map_to_thermal_msg(&memory_map, offset, length)?
+        };
+
+        comms::send(
+            EndpointID::External(External::Host),
+            EndpointID::Internal(Internal::Thermal),
+            &msg,
+        )
+        .await
+        .unwrap();
+
+        Ok(())
+    }
+
+    async fn route_to_time_alarm_service(&self, offset: &mut usize, length: &mut usize) -> Result<(), ec_type::Error> {
+        let msg = {
+            let memory_map = self.ec_memory.borrow();
+            ec_type::mem_map_to_time_alarm_msg(&memory_map, offset, length)?
+        };
+
+        comms::send(
+            EndpointID::External(External::Host),
+            EndpointID::Internal(Internal::TimeAlarm),
+            &msg,
+        )
+        .await
+        .unwrap();
+
+        Ok(())
+    }
 }
 
 impl comms::MailboxDelegate for Service<'_> {
@@ -144,20 +217,6 @@ impl comms::MailboxDelegate for Service<'_> {
 
 static ESPI_SERVICE: OnceLock<Service> = OnceLock::new();
 
-// Initialize eSPI service and register it with the transport service
-async fn init(ec_memory: &'static mut ec_type::structure::ECMemory) {
-    info!("Initializing memory map");
-    ec_memory.ver.major = 0;
-    ec_memory.ver.minor = 1;
-    ec_memory.ver.spin = 0;
-    ec_memory.ver.res0 = 0;
-
-    let espi_service = ESPI_SERVICE.get_or_init(|| Service::new(ec_memory));
-    comms::register_endpoint(espi_service, &espi_service.endpoint)
-        .await
-        .unwrap();
-}
-
 use embassy_imxrt::espi;
 
 #[embassy_executor::task]
@@ -174,7 +233,16 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
     let memory_map: &mut ec_type::structure::ECMemory =
         unsafe { &mut *(memory_map_buffer.as_mut_ptr() as *mut ec_type::structure::ECMemory) };
 
-    init(memory_map).await;
+    info!("Initializing memory map");
+    memory_map.ver.major = 0;
+    memory_map.ver.minor = 1;
+    memory_map.ver.spin = 0;
+    memory_map.ver.res0 = 0;
+
+    let espi_service = ESPI_SERVICE.get_or_init(|| Service::new(memory_map));
+    comms::register_endpoint(espi_service, &espi_service.endpoint)
+        .await
+        .unwrap();
 
     loop {
         embassy_time::Timer::after_secs(10).await;
@@ -183,9 +251,24 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
         match event {
             Ok(espi::Event::Port0(port_event)) => {
                 info!(
-                    "eSPI Port 0, direction: {}, length: {}, offset: {}",
-                    port_event.direction, port_event.length, port_event.offset,
+                    "eSPI Port 0, direction: {}, offset: {}, length: {}",
+                    port_event.direction, port_event.offset, port_event.length,
                 );
+
+                // If it is a peripheral channel write, then we need to notify the service
+                if port_event.direction {
+                    let res = espi_service
+                        .route_to_service(port_event.offset, port_event.length)
+                        .await;
+
+                    if res.is_err() {
+                        error!(
+                            "eSPI master send invalid offset: {} length: {}",
+                            port_event.offset, port_event.length
+                        );
+                    }
+                }
+
                 espi.complete_port(0).await;
             }
             Ok(espi::Event::Port1(_)) => {
