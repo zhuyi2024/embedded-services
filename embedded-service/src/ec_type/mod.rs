@@ -11,6 +11,98 @@ pub enum Error {
     InvalidLocation,
 }
 
+/// Update battery section of memory map based on battery message
+pub fn update_battery_section(msg: &message::BatteryMessage, memory_map: &mut structure::ECMemory) {
+    match msg {
+        message::BatteryMessage::Events(events) => memory_map.batt.events = *events,
+        message::BatteryMessage::LastFullCharge(last_full_charge) => {
+            memory_map.batt.last_full_charge = *last_full_charge
+        }
+        message::BatteryMessage::CycleCount(cycle_count) => memory_map.batt.cycle_count = *cycle_count,
+        message::BatteryMessage::State(state) => memory_map.batt.state = *state,
+        message::BatteryMessage::PresentRate(present_rate) => memory_map.batt.present_rate = *present_rate,
+        message::BatteryMessage::RemainCap(remain_cap) => memory_map.batt.remain_cap = *remain_cap,
+        message::BatteryMessage::PresentVolt(present_volt) => memory_map.batt.present_volt = *present_volt,
+        message::BatteryMessage::PsrState(psr_state) => memory_map.batt.psr_state = *psr_state,
+        message::BatteryMessage::PsrMaxOut(psr_max_out) => memory_map.batt.psr_max_out = *psr_max_out,
+        message::BatteryMessage::PsrMaxIn(psr_max_in) => memory_map.batt.psr_max_in = *psr_max_in,
+        message::BatteryMessage::PeakLevel(peak_level) => memory_map.batt.peak_level = *peak_level,
+        message::BatteryMessage::PeakPower(peak_power) => memory_map.batt.peak_power = *peak_power,
+        message::BatteryMessage::SusLevel(sus_level) => memory_map.batt.sus_level = *sus_level,
+        message::BatteryMessage::SusPower(sus_power) => memory_map.batt.sus_power = *sus_power,
+        message::BatteryMessage::PeakThres(peak_thres) => memory_map.batt.peak_thres = *peak_thres,
+        message::BatteryMessage::SusThres(sus_thres) => memory_map.batt.sus_thres = *sus_thres,
+        message::BatteryMessage::TripThres(trip_thres) => memory_map.batt.trip_thres = *trip_thres,
+        message::BatteryMessage::BmcData(bmc_data) => memory_map.batt.bmc_data = *bmc_data,
+        message::BatteryMessage::BmdData(bmd_data) => memory_map.batt.bmd_data = *bmd_data,
+        message::BatteryMessage::BmdFlags(bmd_flags) => memory_map.batt.bmd_flags = *bmd_flags,
+        message::BatteryMessage::BmdCount(bmd_count) => memory_map.batt.bmd_count = *bmd_count,
+        message::BatteryMessage::ChargeTime(charge_time) => memory_map.batt.charge_time = *charge_time,
+        message::BatteryMessage::RunTime(run_time) => memory_map.batt.run_time = *run_time,
+        message::BatteryMessage::SampleTime(sample_time) => memory_map.batt.sample_time = *sample_time,
+    }
+}
+
+/// Update capabilities section of memory map based on battery message
+pub fn update_capabilities_section(msg: &message::CapabilitiesMessage, memory_map: &mut structure::ECMemory) {
+    match msg {
+        message::CapabilitiesMessage::Events(events) => memory_map.caps.events = *events,
+        message::CapabilitiesMessage::FwVersion(fw_version) => memory_map.caps.fw_version = *fw_version,
+        message::CapabilitiesMessage::SecureState(secure_state) => memory_map.caps.secure_state = *secure_state,
+        message::CapabilitiesMessage::BootStatus(boot_status) => memory_map.caps.boot_status = *boot_status,
+        message::CapabilitiesMessage::FanMask(fan_mask) => memory_map.caps.fan_mask = *fan_mask,
+        message::CapabilitiesMessage::BatteryMask(battery_mask) => memory_map.caps.battery_mask = *battery_mask,
+        message::CapabilitiesMessage::TempMask(temp_mask) => memory_map.caps.temp_mask = *temp_mask,
+        message::CapabilitiesMessage::KeyMask(key_mask) => memory_map.caps.key_mask = *key_mask,
+        message::CapabilitiesMessage::DebugMask(debug_mask) => memory_map.caps.debug_mask = *debug_mask,
+    }
+}
+
+/// Update thermal section of memory map based on battery message
+pub fn update_thermal_section(msg: &message::ThermalMessage, memory_map: &mut structure::ECMemory) {
+    match msg {
+        message::ThermalMessage::Events(events) => memory_map.therm.events = *events,
+        message::ThermalMessage::CoolMode(cool_mode) => memory_map.therm.cool_mode = *cool_mode,
+        message::ThermalMessage::DbaLimit(dba_limit) => memory_map.therm.dba_limit = *dba_limit,
+        message::ThermalMessage::SonneLimit(sonne_limit) => memory_map.therm.sonne_limit = *sonne_limit,
+        message::ThermalMessage::MaLimit(ma_limit) => memory_map.therm.ma_limit = *ma_limit,
+        message::ThermalMessage::Fan1OnTemp(fan1_on_temp) => memory_map.therm.fan1_on_temp = *fan1_on_temp,
+        message::ThermalMessage::Fan1RampTemp(fan1_ramp_temp) => memory_map.therm.fan1_ramp_temp = *fan1_ramp_temp,
+        message::ThermalMessage::Fan1MaxTemp(fan1_max_temp) => memory_map.therm.fan1_max_temp = *fan1_max_temp,
+        message::ThermalMessage::Fan1CrtTemp(fan1_crt_temp) => memory_map.therm.fan1_crt_temp = *fan1_crt_temp,
+        message::ThermalMessage::Fan1HotTemp(fan1_hot_temp) => memory_map.therm.fan1_hot_temp = *fan1_hot_temp,
+        message::ThermalMessage::Fan1MaxRpm(fan1_max_rpm) => memory_map.therm.fan1_max_rpm = *fan1_max_rpm,
+        message::ThermalMessage::Fan1CurRpm(fan1_cur_rpm) => memory_map.therm.fan1_cur_rpm = *fan1_cur_rpm,
+        message::ThermalMessage::Tmp1Val(tmp1_val) => memory_map.therm.tmp1_val = *tmp1_val,
+        message::ThermalMessage::Tmp1Timeout(tmp1_timeout) => memory_map.therm.tmp1_timeout = *tmp1_timeout,
+        message::ThermalMessage::Tmp1Low(tmp1_low) => memory_map.therm.tmp1_low = *tmp1_low,
+        message::ThermalMessage::Tmp1High(tmp1_high) => memory_map.therm.tmp1_high = *tmp1_high,
+    }
+}
+
+/// Update time alarm section of memory map based on battery message
+pub fn update_time_alarm_section(msg: &message::TimeAlarmMessage, memory_map: &mut structure::ECMemory) {
+    match msg {
+        message::TimeAlarmMessage::Events(events) => memory_map.alarm.events = *events,
+        message::TimeAlarmMessage::Capability(capability) => memory_map.alarm.capability = *capability,
+        message::TimeAlarmMessage::Year(year) => memory_map.alarm.year = *year,
+        message::TimeAlarmMessage::Month(month) => memory_map.alarm.month = *month,
+        message::TimeAlarmMessage::Day(day) => memory_map.alarm.day = *day,
+        message::TimeAlarmMessage::Hour(hour) => memory_map.alarm.hour = *hour,
+        message::TimeAlarmMessage::Minute(minute) => memory_map.alarm.minute = *minute,
+        message::TimeAlarmMessage::Second(second) => memory_map.alarm.second = *second,
+        message::TimeAlarmMessage::Valid(valid) => memory_map.alarm.valid = *valid,
+        message::TimeAlarmMessage::Daylight(daylight) => memory_map.alarm.daylight = *daylight,
+        message::TimeAlarmMessage::Res1(res1) => memory_map.alarm.res1 = *res1,
+        message::TimeAlarmMessage::Milli(milli) => memory_map.alarm.milli = *milli,
+        message::TimeAlarmMessage::TimeZone(time_zone) => memory_map.alarm.time_zone = *time_zone,
+        message::TimeAlarmMessage::Res2(res2) => memory_map.alarm.res2 = *res2,
+        message::TimeAlarmMessage::AlarmStatus(alarm_status) => memory_map.alarm.alarm_status = *alarm_status,
+        message::TimeAlarmMessage::AcTimeVal(ac_time_val) => memory_map.alarm.ac_time_val = *ac_time_val,
+        message::TimeAlarmMessage::DcTimeVal(dc_time_val) => memory_map.alarm.dc_time_val = *dc_time_val,
+    }
+}
+
 /// Convert from memory map offset and length to battery message
 /// Modifies offset and length
 pub fn mem_map_to_battery_msg(
