@@ -15,7 +15,7 @@ pub enum CapabilitiesMessage {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TimeAlarmMessage {
     Events(u32),
     Capability(u32),
@@ -37,7 +37,7 @@ pub enum TimeAlarmMessage {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BatteryMessage {
     Events(u32),
     LastFullCharge(u32),
@@ -66,7 +66,7 @@ pub enum BatteryMessage {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ThermalMessage {
     Events(u32),
     CoolMode(u32),
