@@ -103,6 +103,16 @@ pub fn update_time_alarm_section(msg: &message::TimeAlarmMessage, memory_map: &m
     }
 }
 
+/// Helper macro to simplify the conversion of memory map to message
+macro_rules! into_message {
+    ($offset:ident, $length:ident, $member:expr, $msg:expr) => {
+        let value = $member;
+        *$offset += size_of_val(&value);
+        *$length -= size_of_val(&value);
+        return Ok($msg(value));
+    };
+}
+
 /// Convert from memory map offset and length to battery message
 /// Modifies offset and length
 pub fn mem_map_to_battery_msg(
@@ -111,138 +121,171 @@ pub fn mem_map_to_battery_msg(
     length: &mut usize,
 ) -> Result<message::BatteryMessage, Error> {
     let local_offset = *offset - offset_of!(structure::ECMemory, batt);
-    let mut message: Option<message::BatteryMessage> = None;
 
     if local_offset == offset_of!(structure::Battery, events) {
-        let value = memory_map.batt.events;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::Events(value));
+        into_message!(offset, length, memory_map.batt.events, message::BatteryMessage::Events);
     } else if local_offset == offset_of!(structure::Battery, last_full_charge) {
-        let value = memory_map.batt.last_full_charge;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::LastFullCharge(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.last_full_charge,
+            message::BatteryMessage::LastFullCharge
+        );
     } else if local_offset == offset_of!(structure::Battery, cycle_count) {
-        let value = memory_map.batt.cycle_count;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::CycleCount(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.cycle_count,
+            message::BatteryMessage::CycleCount
+        );
     } else if local_offset == offset_of!(structure::Battery, state) {
-        let value = memory_map.batt.state;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::State(value));
+        into_message!(offset, length, memory_map.batt.state, message::BatteryMessage::State);
     } else if local_offset == offset_of!(structure::Battery, present_rate) {
-        let value = memory_map.batt.present_rate;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PresentRate(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.present_rate,
+            message::BatteryMessage::PresentRate
+        );
     } else if local_offset == offset_of!(structure::Battery, remain_cap) {
-        let value = memory_map.batt.remain_cap;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::RemainCap(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.remain_cap,
+            message::BatteryMessage::RemainCap
+        );
     } else if local_offset == offset_of!(structure::Battery, present_volt) {
-        let value = memory_map.batt.present_volt;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PresentVolt(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.present_volt,
+            message::BatteryMessage::PresentVolt
+        );
     } else if local_offset == offset_of!(structure::Battery, psr_state) {
-        let value = memory_map.batt.psr_state;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PsrState(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.psr_state,
+            message::BatteryMessage::PsrState
+        );
     } else if local_offset == offset_of!(structure::Battery, psr_max_out) {
-        let value = memory_map.batt.psr_max_out;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PsrMaxOut(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.psr_max_out,
+            message::BatteryMessage::PsrMaxOut
+        );
     } else if local_offset == offset_of!(structure::Battery, psr_max_in) {
-        let value = memory_map.batt.psr_max_in;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PsrMaxIn(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.psr_max_in,
+            message::BatteryMessage::PsrMaxIn
+        );
     } else if local_offset == offset_of!(structure::Battery, peak_level) {
-        let value = memory_map.batt.peak_level;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PeakLevel(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.peak_level,
+            message::BatteryMessage::PeakLevel
+        );
     } else if local_offset == offset_of!(structure::Battery, peak_power) {
-        let value = memory_map.batt.peak_power;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PeakPower(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.peak_power,
+            message::BatteryMessage::PeakPower
+        );
     } else if local_offset == offset_of!(structure::Battery, sus_level) {
-        let value = memory_map.batt.sus_level;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::SusLevel(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.sus_level,
+            message::BatteryMessage::SusLevel
+        );
     } else if local_offset == offset_of!(structure::Battery, sus_power) {
-        let value = memory_map.batt.sus_power;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::SusPower(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.sus_power,
+            message::BatteryMessage::SusPower
+        );
     } else if local_offset == offset_of!(structure::Battery, peak_thres) {
-        let value = memory_map.batt.peak_thres;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::PeakThres(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.peak_thres,
+            message::BatteryMessage::PeakThres
+        );
     } else if local_offset == offset_of!(structure::Battery, sus_thres) {
-        let value = memory_map.batt.sus_thres;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::SusThres(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.sus_thres,
+            message::BatteryMessage::SusThres
+        );
     } else if local_offset == offset_of!(structure::Battery, trip_thres) {
-        let value = memory_map.batt.trip_thres;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::TripThres(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.trip_thres,
+            message::BatteryMessage::TripThres
+        );
     } else if local_offset == offset_of!(structure::Battery, bmc_data) {
-        let value = memory_map.batt.bmc_data;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::BmcData(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.bmc_data,
+            message::BatteryMessage::BmcData
+        );
     } else if local_offset == offset_of!(structure::Battery, bmd_data) {
-        let value = memory_map.batt.bmd_data;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::BmdData(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.bmd_data,
+            message::BatteryMessage::BmdData
+        );
     } else if local_offset == offset_of!(structure::Battery, bmd_flags) {
-        let value = memory_map.batt.bmd_flags;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::BmdFlags(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.bmd_flags,
+            message::BatteryMessage::BmdFlags
+        );
     } else if local_offset == offset_of!(structure::Battery, bmd_count) {
-        let value = memory_map.batt.bmd_count;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::BmdCount(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.bmd_count,
+            message::BatteryMessage::BmdCount
+        );
     } else if local_offset == offset_of!(structure::Battery, charge_time) {
-        let value = memory_map.batt.charge_time;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::ChargeTime(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.charge_time,
+            message::BatteryMessage::ChargeTime
+        );
     } else if local_offset == offset_of!(structure::Battery, run_time) {
-        let value = memory_map.batt.run_time;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::RunTime(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.run_time,
+            message::BatteryMessage::RunTime
+        );
     } else if local_offset == offset_of!(structure::Battery, sample_time) {
-        let value = memory_map.batt.sample_time;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::BatteryMessage::SampleTime(value));
-    }
-
-    if let Some(msg) = message {
-        Ok(msg)
+        into_message!(
+            offset,
+            length,
+            memory_map.batt.sample_time,
+            message::BatteryMessage::SampleTime
+        );
     } else {
         Err(Error::InvalidLocation)
     }
 }
 
-/// Convert from memory map offset and length to thermal message from offset and length
+/// Convert from memory map offset and length to thermal message
 /// Modifies offset and length
 pub fn mem_map_to_thermal_msg(
     memory_map: &structure::ECMemory,
@@ -250,92 +293,114 @@ pub fn mem_map_to_thermal_msg(
     length: &mut usize,
 ) -> Result<message::ThermalMessage, Error> {
     let local_offset = *offset - offset_of!(structure::ECMemory, therm);
-    let mut message: Option<message::ThermalMessage> = None;
 
     if local_offset == offset_of!(structure::Thermal, events) {
-        let value = memory_map.therm.events;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Events(value));
+        into_message!(offset, length, memory_map.therm.events, message::ThermalMessage::Events);
     } else if local_offset == offset_of!(structure::Thermal, cool_mode) {
-        let value = memory_map.therm.cool_mode;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::CoolMode(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.cool_mode,
+            message::ThermalMessage::CoolMode
+        );
     } else if local_offset == offset_of!(structure::Thermal, dba_limit) {
-        let value = memory_map.therm.dba_limit;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::DbaLimit(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.dba_limit,
+            message::ThermalMessage::DbaLimit
+        );
     } else if local_offset == offset_of!(structure::Thermal, sonne_limit) {
-        let value = memory_map.therm.sonne_limit;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::SonneLimit(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.sonne_limit,
+            message::ThermalMessage::SonneLimit
+        );
     } else if local_offset == offset_of!(structure::Thermal, ma_limit) {
-        let value = memory_map.therm.ma_limit;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::MaLimit(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.ma_limit,
+            message::ThermalMessage::MaLimit
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_on_temp) {
-        let value = memory_map.therm.fan1_on_temp;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1OnTemp(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_on_temp,
+            message::ThermalMessage::Fan1OnTemp
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_ramp_temp) {
-        let value = memory_map.therm.fan1_ramp_temp;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1RampTemp(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_ramp_temp,
+            message::ThermalMessage::Fan1RampTemp
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_max_temp) {
-        let value = memory_map.therm.fan1_max_temp;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1MaxTemp(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_max_temp,
+            message::ThermalMessage::Fan1MaxTemp
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_crt_temp) {
-        let value = memory_map.therm.fan1_crt_temp;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1CrtTemp(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_crt_temp,
+            message::ThermalMessage::Fan1CrtTemp
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_hot_temp) {
-        let value = memory_map.therm.fan1_hot_temp;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1HotTemp(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_hot_temp,
+            message::ThermalMessage::Fan1HotTemp
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_max_rpm) {
-        let value = memory_map.therm.fan1_max_rpm;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1MaxRpm(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_max_rpm,
+            message::ThermalMessage::Fan1MaxRpm
+        );
     } else if local_offset == offset_of!(structure::Thermal, fan1_cur_rpm) {
-        let value = memory_map.therm.fan1_cur_rpm;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Fan1CurRpm(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.fan1_cur_rpm,
+            message::ThermalMessage::Fan1CurRpm
+        );
     } else if local_offset == offset_of!(structure::Thermal, tmp1_val) {
-        let value = memory_map.therm.tmp1_val;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Tmp1Val(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.tmp1_val,
+            message::ThermalMessage::Tmp1Val
+        );
     } else if local_offset == offset_of!(structure::Thermal, tmp1_timeout) {
-        let value = memory_map.therm.tmp1_timeout;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Tmp1Timeout(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.tmp1_timeout,
+            message::ThermalMessage::Tmp1Timeout
+        );
     } else if local_offset == offset_of!(structure::Thermal, tmp1_low) {
-        let value = memory_map.therm.tmp1_low;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Tmp1Low(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.tmp1_low,
+            message::ThermalMessage::Tmp1Low
+        );
     } else if local_offset == offset_of!(structure::Thermal, tmp1_high) {
-        let value = memory_map.therm.tmp1_high;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::ThermalMessage::Tmp1High(value));
-    }
-
-    if let Some(msg) = message {
-        Ok(msg)
+        into_message!(
+            offset,
+            length,
+            memory_map.therm.tmp1_high,
+            message::ThermalMessage::Tmp1High
+        );
     } else {
         Err(Error::InvalidLocation)
     }
@@ -349,97 +414,86 @@ pub fn mem_map_to_time_alarm_msg(
     length: &mut usize,
 ) -> Result<message::TimeAlarmMessage, Error> {
     let local_offset = *offset - offset_of!(structure::ECMemory, alarm);
-    let mut message: Option<message::TimeAlarmMessage> = None;
 
     if local_offset == offset_of!(structure::TimeAlarm, events) {
-        let value = memory_map.alarm.events;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Events(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.events,
+            message::TimeAlarmMessage::Events
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, capability) {
-        let value = memory_map.alarm.capability;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Capability(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.capability,
+            message::TimeAlarmMessage::Capability
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, year) {
-        let value = memory_map.alarm.year;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Year(value));
+        into_message!(offset, length, memory_map.alarm.year, message::TimeAlarmMessage::Year);
     } else if local_offset == offset_of!(structure::TimeAlarm, month) {
-        let value = memory_map.alarm.month;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Month(value));
+        into_message!(offset, length, memory_map.alarm.month, message::TimeAlarmMessage::Month);
     } else if local_offset == offset_of!(structure::TimeAlarm, day) {
-        let value = memory_map.alarm.day;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Day(value));
+        into_message!(offset, length, memory_map.alarm.day, message::TimeAlarmMessage::Day);
     } else if local_offset == offset_of!(structure::TimeAlarm, hour) {
-        let value = memory_map.alarm.hour;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Hour(value));
+        into_message!(offset, length, memory_map.alarm.hour, message::TimeAlarmMessage::Hour);
     } else if local_offset == offset_of!(structure::TimeAlarm, minute) {
-        let value = memory_map.alarm.minute;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Minute(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.minute,
+            message::TimeAlarmMessage::Minute
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, second) {
-        let value = memory_map.alarm.second;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Second(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.second,
+            message::TimeAlarmMessage::Second
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, valid) {
-        let value = memory_map.alarm.valid;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Valid(value));
+        into_message!(offset, length, memory_map.alarm.valid, message::TimeAlarmMessage::Valid);
     } else if local_offset == offset_of!(structure::TimeAlarm, daylight) {
-        let value = memory_map.alarm.daylight;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Daylight(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.daylight,
+            message::TimeAlarmMessage::Daylight
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, res1) {
-        let value = memory_map.alarm.res1;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Res1(value));
+        into_message!(offset, length, memory_map.alarm.res1, message::TimeAlarmMessage::Res1);
     } else if local_offset == offset_of!(structure::TimeAlarm, milli) {
-        let value = memory_map.alarm.milli;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Milli(value));
+        into_message!(offset, length, memory_map.alarm.milli, message::TimeAlarmMessage::Milli);
     } else if local_offset == offset_of!(structure::TimeAlarm, time_zone) {
-        let value = memory_map.alarm.time_zone;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::TimeZone(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.time_zone,
+            message::TimeAlarmMessage::TimeZone
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, res2) {
-        let value = memory_map.alarm.res2;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::Res2(value));
+        into_message!(offset, length, memory_map.alarm.res2, message::TimeAlarmMessage::Res2);
     } else if local_offset == offset_of!(structure::TimeAlarm, alarm_status) {
-        let value = memory_map.alarm.alarm_status;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::AlarmStatus(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.alarm_status,
+            message::TimeAlarmMessage::AlarmStatus
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, ac_time_val) {
-        let value = memory_map.alarm.ac_time_val;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::AcTimeVal(value));
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.ac_time_val,
+            message::TimeAlarmMessage::AcTimeVal
+        );
     } else if local_offset == offset_of!(structure::TimeAlarm, dc_time_val) {
-        let value = memory_map.alarm.dc_time_val;
-        *offset += size_of_val(&value);
-        *length -= size_of_val(&value);
-        message = Some(message::TimeAlarmMessage::DcTimeVal(value));
-    }
-
-    if let Some(msg) = message {
-        Ok(msg)
+        into_message!(
+            offset,
+            length,
+            memory_map.alarm.dc_time_val,
+            message::TimeAlarmMessage::DcTimeVal
+        );
     } else {
         Err(Error::InvalidLocation)
     }
@@ -448,6 +502,18 @@ pub fn mem_map_to_time_alarm_msg(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    macro_rules! test_field {
+        ($memory_map:ident, $offset:ident, $length:ident, $field:expr, $func:ident, $msg:expr) => {
+            let field = $field;
+            let next_offset = $offset + size_of_val(&field);
+            let next_length = $length - size_of_val(&field);
+            let msg = $func(&$memory_map, &mut $offset, &mut $length).unwrap();
+            assert_eq!(msg, $msg(field));
+            assert_eq!($offset, next_offset);
+            assert_eq!($length, next_length);
+        };
+    }
 
     #[test]
     fn test_mem_map_to_battery_msg() {
@@ -487,197 +553,198 @@ mod tests {
         let mut offset = offset_of!(ECMemory, batt);
         let mut length = size_of::<Battery>();
 
-        let events = memory_map.batt.events;
-        let next_offset = offset + size_of_val(&events);
-        let next_length = length - size_of_val(&events);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::Events(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let last_full_charge = memory_map.batt.last_full_charge;
-        let next_offset = offset + size_of_val(&last_full_charge);
-        let next_length = length - size_of_val(&last_full_charge);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::LastFullCharge(2));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let cycle_count = memory_map.batt.cycle_count;
-        let next_offset = offset + size_of_val(&cycle_count);
-        let next_length = length - size_of_val(&cycle_count);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::CycleCount(3));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let state = memory_map.batt.state;
-        let next_offset = offset + size_of_val(&state);
-        let next_length = length - size_of_val(&state);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::State(4));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let present_rate = memory_map.batt.present_rate;
-        let next_offset = offset + size_of_val(&present_rate);
-        let next_length = length - size_of_val(&present_rate);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PresentRate(5));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let remain_cap = memory_map.batt.remain_cap;
-        let next_offset = offset + size_of_val(&remain_cap);
-        let next_length = length - size_of_val(&remain_cap);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::RemainCap(6));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let present_volt = memory_map.batt.present_volt;
-        let next_offset = offset + size_of_val(&present_volt);
-        let next_length = length - size_of_val(&present_volt);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PresentVolt(7));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let psr_state = memory_map.batt.psr_state;
-        let next_offset = offset + size_of_val(&psr_state);
-        let next_length = length - size_of_val(&psr_state);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PsrState(8));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let psr_max_out = memory_map.batt.psr_max_out;
-        let next_offset = offset + size_of_val(&psr_max_out);
-        let next_length = length - size_of_val(&psr_max_out);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PsrMaxOut(9));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let psr_max_in = memory_map.batt.psr_max_in;
-        let next_offset = offset + size_of_val(&psr_max_in);
-        let next_length = length - size_of_val(&psr_max_in);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PsrMaxIn(10));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let peak_level = memory_map.batt.peak_level;
-        let next_offset = offset + size_of_val(&peak_level);
-        let next_length = length - size_of_val(&peak_level);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PeakLevel(11));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let peak_power = memory_map.batt.peak_power;
-        let next_offset = offset + size_of_val(&peak_power);
-        let next_length = length - size_of_val(&peak_power);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PeakPower(12));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let sus_level = memory_map.batt.sus_level;
-        let next_offset = offset + size_of_val(&sus_level);
-        let next_length = length - size_of_val(&sus_level);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::SusLevel(13));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let sus_power = memory_map.batt.sus_power;
-        let next_offset = offset + size_of_val(&sus_power);
-        let next_length = length - size_of_val(&sus_power);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::SusPower(14));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let peak_thres = memory_map.batt.peak_thres;
-        let next_offset = offset + size_of_val(&peak_thres);
-        let next_length = length - size_of_val(&peak_thres);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::PeakThres(15));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let sus_thres = memory_map.batt.sus_thres;
-        let next_offset = offset + size_of_val(&sus_thres);
-        let next_length = length - size_of_val(&sus_thres);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::SusThres(16));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let trip_thres = memory_map.batt.trip_thres;
-        let next_offset = offset + size_of_val(&trip_thres);
-        let next_length = length - size_of_val(&trip_thres);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::TripThres(17));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let bmc_data = memory_map.batt.bmc_data;
-        let next_offset = offset + size_of_val(&bmc_data);
-        let next_length = length - size_of_val(&bmc_data);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::BmcData(18));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let bmd_data = memory_map.batt.bmd_data;
-        let next_offset = offset + size_of_val(&bmd_data);
-        let next_length = length - size_of_val(&bmd_data);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::BmdData(19));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let bmd_flags = memory_map.batt.bmd_flags;
-        let next_offset = offset + size_of_val(&bmd_flags);
-        let next_length = length - size_of_val(&bmd_flags);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::BmdFlags(20));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let bmd_count = memory_map.batt.bmd_count;
-        let next_offset = offset + size_of_val(&bmd_count);
-        let next_length = length - size_of_val(&bmd_count);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::BmdCount(21));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let charge_time = memory_map.batt.charge_time;
-        let next_offset = offset + size_of_val(&charge_time);
-        let next_length = length - size_of_val(&charge_time);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::ChargeTime(22));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let run_time = memory_map.batt.run_time;
-        let next_offset = offset + size_of_val(&run_time);
-        let next_length = length - size_of_val(&run_time);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::RunTime(23));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let sample_time = memory_map.batt.sample_time;
-        let next_offset = offset + size_of_val(&sample_time);
-        let next_length = length - size_of_val(&sample_time);
-        let msg = mem_map_to_battery_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, BatteryMessage::SampleTime(24));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.events,
+            mem_map_to_battery_msg,
+            BatteryMessage::Events
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.last_full_charge,
+            mem_map_to_battery_msg,
+            BatteryMessage::LastFullCharge
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.cycle_count,
+            mem_map_to_battery_msg,
+            BatteryMessage::CycleCount
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.state,
+            mem_map_to_battery_msg,
+            BatteryMessage::State
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.present_rate,
+            mem_map_to_battery_msg,
+            BatteryMessage::PresentRate
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.remain_cap,
+            mem_map_to_battery_msg,
+            BatteryMessage::RemainCap
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.present_volt,
+            mem_map_to_battery_msg,
+            BatteryMessage::PresentVolt
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.psr_state,
+            mem_map_to_battery_msg,
+            BatteryMessage::PsrState
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.psr_max_out,
+            mem_map_to_battery_msg,
+            BatteryMessage::PsrMaxOut
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.psr_max_in,
+            mem_map_to_battery_msg,
+            BatteryMessage::PsrMaxIn
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.peak_level,
+            mem_map_to_battery_msg,
+            BatteryMessage::PeakLevel
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.peak_power,
+            mem_map_to_battery_msg,
+            BatteryMessage::PeakPower
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.sus_level,
+            mem_map_to_battery_msg,
+            BatteryMessage::SusLevel
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.sus_power,
+            mem_map_to_battery_msg,
+            BatteryMessage::SusPower
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.peak_thres,
+            mem_map_to_battery_msg,
+            BatteryMessage::PeakThres
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.sus_thres,
+            mem_map_to_battery_msg,
+            BatteryMessage::SusThres
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.trip_thres,
+            mem_map_to_battery_msg,
+            BatteryMessage::TripThres
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.bmc_data,
+            mem_map_to_battery_msg,
+            BatteryMessage::BmcData
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.bmd_data,
+            mem_map_to_battery_msg,
+            BatteryMessage::BmdData
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.bmd_flags,
+            mem_map_to_battery_msg,
+            BatteryMessage::BmdFlags
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.bmd_count,
+            mem_map_to_battery_msg,
+            BatteryMessage::BmdCount
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.charge_time,
+            mem_map_to_battery_msg,
+            BatteryMessage::ChargeTime
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.run_time,
+            mem_map_to_battery_msg,
+            BatteryMessage::RunTime
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.sample_time,
+            mem_map_to_battery_msg,
+            BatteryMessage::SampleTime
+        );
 
         assert_eq!(length, 0);
     }
@@ -753,133 +820,134 @@ mod tests {
         let mut offset = offset_of!(ECMemory, therm);
         let mut length = size_of::<Thermal>();
 
-        let events = memory_map.therm.events;
-        let next_offset = offset + size_of_val(&events);
-        let next_length = length - size_of_val(&events);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Events(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let cool_mode = memory_map.therm.cool_mode;
-        let next_offset = offset + size_of_val(&cool_mode);
-        let next_length = length - size_of_val(&cool_mode);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::CoolMode(2));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let dba_limit = memory_map.therm.dba_limit;
-        let next_offset = offset + size_of_val(&dba_limit);
-        let next_length = length - size_of_val(&dba_limit);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::DbaLimit(3));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let sonne_limit = memory_map.therm.sonne_limit;
-        let next_offset = offset + size_of_val(&sonne_limit);
-        let next_length = length - size_of_val(&sonne_limit);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::SonneLimit(4));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let ma_limit = memory_map.therm.ma_limit;
-        let next_offset = offset + size_of_val(&ma_limit);
-        let next_length = length - size_of_val(&ma_limit);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::MaLimit(5));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_on_temp = memory_map.therm.fan1_on_temp;
-        let next_offset = offset + size_of_val(&fan1_on_temp);
-        let next_length = length - size_of_val(&fan1_on_temp);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1OnTemp(6));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_ramp_temp = memory_map.therm.fan1_ramp_temp;
-        let next_offset = offset + size_of_val(&fan1_ramp_temp);
-        let next_length = length - size_of_val(&fan1_ramp_temp);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1RampTemp(7));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_max_temp = memory_map.therm.fan1_max_temp;
-        let next_offset = offset + size_of_val(&fan1_max_temp);
-        let next_length = length - size_of_val(&fan1_max_temp);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1MaxTemp(8));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_crt_temp = memory_map.therm.fan1_crt_temp;
-        let next_offset = offset + size_of_val(&fan1_crt_temp);
-        let next_length = length - size_of_val(&fan1_crt_temp);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1CrtTemp(9));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_hot_temp = memory_map.therm.fan1_hot_temp;
-        let next_offset = offset + size_of_val(&fan1_hot_temp);
-        let next_length = length - size_of_val(&fan1_hot_temp);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1HotTemp(10));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_max_rpm = memory_map.therm.fan1_max_rpm;
-        let next_offset = offset + size_of_val(&fan1_max_rpm);
-        let next_length = length - size_of_val(&fan1_max_rpm);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1MaxRpm(11));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let fan1_cur_rpm = memory_map.therm.fan1_cur_rpm;
-        let next_offset = offset + size_of_val(&fan1_cur_rpm);
-        let next_length = length - size_of_val(&fan1_cur_rpm);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Fan1CurRpm(12));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let tmp1_val = memory_map.therm.tmp1_val;
-        let next_offset = offset + size_of_val(&tmp1_val);
-        let next_length = length - size_of_val(&tmp1_val);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Tmp1Val(13));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let tmp1_timeout = memory_map.therm.tmp1_timeout;
-        let next_offset = offset + size_of_val(&tmp1_timeout);
-        let next_length = length - size_of_val(&tmp1_timeout);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Tmp1Timeout(14));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let tmp1_low = memory_map.therm.tmp1_low;
-        let next_offset = offset + size_of_val(&tmp1_low);
-        let next_length = length - size_of_val(&tmp1_low);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Tmp1Low(15));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let tmp1_high = memory_map.therm.tmp1_high;
-        let next_offset = offset + size_of_val(&tmp1_high);
-        let next_length = length - size_of_val(&tmp1_high);
-        let msg = mem_map_to_thermal_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, ThermalMessage::Tmp1High(16));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.events,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Events
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.cool_mode,
+            mem_map_to_thermal_msg,
+            ThermalMessage::CoolMode
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.dba_limit,
+            mem_map_to_thermal_msg,
+            ThermalMessage::DbaLimit
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.sonne_limit,
+            mem_map_to_thermal_msg,
+            ThermalMessage::SonneLimit
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.ma_limit,
+            mem_map_to_thermal_msg,
+            ThermalMessage::MaLimit
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_on_temp,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1OnTemp
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_ramp_temp,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1RampTemp
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_max_temp,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1MaxTemp
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_crt_temp,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1CrtTemp
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_hot_temp,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1HotTemp
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_max_rpm,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1MaxRpm
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.fan1_cur_rpm,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Fan1CurRpm
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.tmp1_val,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Tmp1Val
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.tmp1_timeout,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Tmp1Timeout
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.tmp1_low,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Tmp1Low
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.therm.tmp1_high,
+            mem_map_to_thermal_msg,
+            ThermalMessage::Tmp1High
+        );
 
         assert_eq!(length, 0);
     }
@@ -948,141 +1016,142 @@ mod tests {
         let mut offset = offset_of!(ECMemory, alarm);
         let mut length = size_of::<TimeAlarm>();
 
-        let events = memory_map.alarm.events;
-        let next_offset = offset + size_of_val(&events);
-        let next_length = length - size_of_val(&events);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Events(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let capability = memory_map.alarm.capability;
-        let next_offset = offset + size_of_val(&capability);
-        let next_length = length - size_of_val(&capability);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Capability(2));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let year = memory_map.alarm.year;
-        let next_offset = offset + size_of_val(&year);
-        let next_length = length - size_of_val(&year);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Year(2025));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let month = memory_map.alarm.month;
-        let next_offset = offset + size_of_val(&month);
-        let next_length = length - size_of_val(&month);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Month(3));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let day = memory_map.alarm.day;
-        let next_offset = offset + size_of_val(&day);
-        let next_length = length - size_of_val(&day);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Day(12));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let hour = memory_map.alarm.hour;
-        let next_offset = offset + size_of_val(&hour);
-        let next_length = length - size_of_val(&hour);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Hour(10));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let minute = memory_map.alarm.minute;
-        let next_offset = offset + size_of_val(&minute);
-        let next_length = length - size_of_val(&minute);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Minute(30));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let second = memory_map.alarm.second;
-        let next_offset = offset + size_of_val(&second);
-        let next_length = length - size_of_val(&second);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Second(45));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let valid = memory_map.alarm.valid;
-        let next_offset = offset + size_of_val(&valid);
-        let next_length = length - size_of_val(&valid);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Valid(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let daylight = memory_map.alarm.daylight;
-        let next_offset = offset + size_of_val(&daylight);
-        let next_length = length - size_of_val(&daylight);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Daylight(0));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let res1 = memory_map.alarm.res1;
-        let next_offset = offset + size_of_val(&res1);
-        let next_length = length - size_of_val(&res1);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Res1(0));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let milli = memory_map.alarm.milli;
-        let next_offset = offset + size_of_val(&milli);
-        let next_length = length - size_of_val(&milli);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Milli(500));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let time_zone = memory_map.alarm.time_zone;
-        let next_offset = offset + size_of_val(&time_zone);
-        let next_length = length - size_of_val(&time_zone);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::TimeZone(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let res2 = memory_map.alarm.res2;
-        let next_offset = offset + size_of_val(&res2);
-        let next_length = length - size_of_val(&res2);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::Res2(0));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let alarm_status = memory_map.alarm.alarm_status;
-        let next_offset = offset + size_of_val(&alarm_status);
-        let next_length = length - size_of_val(&alarm_status);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::AlarmStatus(1));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let ac_time_val = memory_map.alarm.ac_time_val;
-        let next_offset = offset + size_of_val(&ac_time_val);
-        let next_length = length - size_of_val(&ac_time_val);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::AcTimeVal(100));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
-
-        let dc_time_val = memory_map.alarm.dc_time_val;
-        let next_offset = offset + size_of_val(&dc_time_val);
-        let next_length = length - size_of_val(&dc_time_val);
-        let msg = mem_map_to_time_alarm_msg(&memory_map, &mut offset, &mut length).unwrap();
-        assert_eq!(msg, TimeAlarmMessage::DcTimeVal(200));
-        assert_eq!(offset, next_offset);
-        assert_eq!(length, next_length);
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.events,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Events
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.capability,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Capability
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.year,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Year
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.month,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Month
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.day,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Day
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.hour,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Hour
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.minute,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Minute
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.second,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Second
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.valid,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Valid
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.daylight,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Daylight
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.res1,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Res1
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.milli,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Milli
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.time_zone,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::TimeZone
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.res2,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::Res2
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.alarm_status,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::AlarmStatus
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.ac_time_val,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::AcTimeVal
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.alarm.dc_time_val,
+            mem_map_to_time_alarm_msg,
+            TimeAlarmMessage::DcTimeVal
+        );
 
         assert_eq!(length, 0);
     }
