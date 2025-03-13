@@ -1,3 +1,6 @@
+[![check](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/check.yml/badge.svg)](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/check.yml)
+[![no-std](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/nostd.yml/badge.svg)](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/nostd.yml)
+
 # EC Services
 
 ## Overview
