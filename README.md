@@ -1,3 +1,7 @@
+[![check](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/check.yml/badge.svg)](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/check.yml)
+[![no-std](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/nostd.yml/badge.svg)](https://github.com/OpenDevicePartnership/embedded-services/actions/workflows/nostd.yml)
+[![LICENSE](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
+
 # EC Services
 
 ## Overview
