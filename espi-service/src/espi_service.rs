@@ -42,16 +42,33 @@ impl Service<'_> {
         let mut offset = offset;
         let mut length = length;
 
+        if offset + length > size_of::<ec_type::structure::ECMemory>() {
+            return Err(ec_type::Error::InvalidLocation);
+        }
+
         while length > 0 {
-            if offset >= offset_of!(ec_type::structure::ECMemory, batt)
-                && offset < offset_of!(ec_type::structure::ECMemory, therm)
+            if offset >= offset_of!(ec_type::structure::ECMemory, ver)
+                && offset < offset_of!(ec_type::structure::ECMemory, ver) + size_of::<ec_type::structure::Version>()
+            {
+                // This is a read-only section. eSPI master should not write to it.
+                return Err(ec_type::Error::InvalidLocation);
+            } else if offset >= offset_of!(ec_type::structure::ECMemory, caps)
+                && offset
+                    < offset_of!(ec_type::structure::ECMemory, caps) + size_of::<ec_type::structure::Capabilities>()
+            {
+                // This is a read-only section. eSPI master should not write to it.
+                return Err(ec_type::Error::InvalidLocation);
+            } else if offset >= offset_of!(ec_type::structure::ECMemory, batt)
+                && offset < offset_of!(ec_type::structure::ECMemory, batt) + size_of::<ec_type::structure::Battery>()
             {
                 self.route_to_battery_service(&mut offset, &mut length).await?;
             } else if offset >= offset_of!(ec_type::structure::ECMemory, therm)
-                && offset < offset_of!(ec_type::structure::ECMemory, alarm)
+                && offset < offset_of!(ec_type::structure::ECMemory, therm) + size_of::<ec_type::structure::Thermal>()
             {
                 self.route_to_thermal_service(&mut offset, &mut length).await?;
-            } else if offset >= offset_of!(ec_type::structure::ECMemory, alarm) {
+            } else if offset >= offset_of!(ec_type::structure::ECMemory, alarm)
+                && offset < offset_of!(ec_type::structure::ECMemory, alarm) + size_of::<ec_type::structure::TimeAlarm>()
+            {
                 self.route_to_time_alarm_service(&mut offset, &mut length).await?;
             }
         }
