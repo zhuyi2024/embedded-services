@@ -53,6 +53,9 @@ pub enum Internal {
     /// Security service provider
     Security,
 
+    /// Time alarm service provider
+    TimeAlarm,
+
     /// OEM defined receiver
     Oem(OemKey),
 }
@@ -235,6 +238,7 @@ fn get_list(target: EndpointID) -> &'static OnceLock<IntrusiveList> {
             static INTERNAL_LIST_NONVOL: OnceLock<IntrusiveList> = OnceLock::new();
             static INTERNAL_LIST_DEBUG: OnceLock<IntrusiveList> = OnceLock::new();
             static INTERNAL_LIST_SECURITY: OnceLock<IntrusiveList> = OnceLock::new();
+            static INTERNAL_LIST_TIME_ALARM: OnceLock<IntrusiveList> = OnceLock::new();
             static INTERNAL_LIST_OEM: OnceLock<IntrusiveList> = OnceLock::new();
 
             match int_endpoint {
@@ -250,6 +254,7 @@ fn get_list(target: EndpointID) -> &'static OnceLock<IntrusiveList> {
                 Nonvol => &INTERNAL_LIST_NONVOL,
                 Debug => &INTERNAL_LIST_DEBUG,
                 Security => &INTERNAL_LIST_SECURITY,
+                TimeAlarm => &INTERNAL_LIST_TIME_ALARM,
                 Oem(_key) => &INTERNAL_LIST_OEM,
             }
         }
@@ -295,6 +300,7 @@ pub(crate) fn init() {
     get_list(Internal::Nonvol.into()).get_or_init(IntrusiveList::new);
     get_list(Internal::Debug.into()).get_or_init(IntrusiveList::new);
     get_list(Internal::Security.into()).get_or_init(IntrusiveList::new);
+    get_list(Internal::TimeAlarm.into()).get_or_init(IntrusiveList::new);
     get_list(Internal::Oem(0).into()).get_or_init(IntrusiveList::new);
 
     // initialize external subscriber lists

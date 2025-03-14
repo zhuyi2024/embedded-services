@@ -2,7 +2,7 @@
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Version {
     pub major: u8,
     pub minor: u8,
@@ -12,7 +12,7 @@ pub struct Version {
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Capabilities {
     pub events: u32,
     pub fw_version: Version,
@@ -27,7 +27,7 @@ pub struct Capabilities {
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TimeAlarm {
     pub events: u32,
     pub capability: u32,
@@ -50,7 +50,7 @@ pub struct TimeAlarm {
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Battery {
     pub events: u32,
     pub last_full_charge: u32,
@@ -80,7 +80,7 @@ pub struct Battery {
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Thermal {
     pub events: u32,
     pub cool_mode: u32,
@@ -102,7 +102,7 @@ pub struct Thermal {
 
 #[allow(missing_docs)]
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ECMemory {
     pub ver: Version,
     pub caps: Capabilities,
