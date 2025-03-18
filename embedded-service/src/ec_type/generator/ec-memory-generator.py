@@ -63,6 +63,21 @@ def open_file(file_path):
   except Exception as e:
     print(f"An error occurred: {e}")
 
+def check_for_32bit_alignment(data):
+  sizes = {'u32': 4, 'u16': 2, 'u8': 1, 'i32': 4, 'i16': 2, 'i8': 1}
+  for key, value in data.items():
+    size = 0
+    for sub_key, sub_value in value.items():
+      if isinstance(sub_value, dict) and 'type' in sub_value:
+        size += sizes[sub_value['type']]
+      sizes[key] = size
+  
+  for key, size in sizes.items():
+    if not is_primitive_type(key) and size % 4 != 0:
+      print(f"Warning: {key} is not 32-bit aligned. Size: {size} bytes")
+
+def is_primitive_type(type_str):
+    return type_str in ['u32', 'u16', 'u8', 'i32', 'i16', 'i8']
 
 if __name__ == "__main__":
   if len(sys.argv) != 2:
@@ -74,6 +89,8 @@ if __name__ == "__main__":
     
     # Load the YAML data
     data = yaml.safe_load(yaml_data)
+
+    check_for_32bit_alignment(data)
 
     # Convert the YAML data to Rust structures and print the result
     rust_code = yaml_to_rust(data)
