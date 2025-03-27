@@ -40,6 +40,7 @@ pub enum TimeAlarmMessage {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BatteryMessage {
     Events(u32),
+    Status(u32),
     LastFullCharge(u32),
     CycleCount(u32),
     State(u32),

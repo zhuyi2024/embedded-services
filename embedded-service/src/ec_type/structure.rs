@@ -1,5 +1,6 @@
 //! EC Internal Data Structures
 
+#[allow(missing_docs)]
 pub const EC_MEMMAP_VERSION: Version = Version {
     major: 0,
     minor: 1,

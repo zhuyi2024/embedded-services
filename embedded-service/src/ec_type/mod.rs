@@ -15,6 +15,7 @@ pub enum Error {
 pub fn update_battery_section(msg: &message::BatteryMessage, memory_map: &mut structure::ECMemory) {
     match msg {
         message::BatteryMessage::Events(events) => memory_map.batt.events = *events,
+        message::BatteryMessage::Status(status) => memory_map.batt.status = *status,
         message::BatteryMessage::LastFullCharge(last_full_charge) => {
             memory_map.batt.last_full_charge = *last_full_charge
         }
@@ -124,6 +125,8 @@ pub fn mem_map_to_battery_msg(
 
     if local_offset == offset_of!(structure::Battery, events) {
         into_message!(offset, length, memory_map.batt.events, message::BatteryMessage::Events);
+    } else if local_offset == offset_of!(structure::Battery, status) {
+        into_message!(offset, length, memory_map.batt.status, message::BatteryMessage::Status);
     } else if local_offset == offset_of!(structure::Battery, last_full_charge) {
         into_message!(
             offset,
@@ -523,29 +526,30 @@ mod tests {
         let memory_map = ECMemory {
             batt: Battery {
                 events: 1,
-                last_full_charge: 2,
-                cycle_count: 3,
-                state: 4,
-                present_rate: 5,
-                remain_cap: 6,
-                present_volt: 7,
-                psr_state: 8,
-                psr_max_out: 9,
-                psr_max_in: 10,
-                peak_level: 11,
-                peak_power: 12,
-                sus_level: 13,
-                sus_power: 14,
-                peak_thres: 15,
-                sus_thres: 16,
-                trip_thres: 17,
-                bmc_data: 18,
-                bmd_data: 19,
-                bmd_flags: 20,
-                bmd_count: 21,
-                charge_time: 22,
-                run_time: 23,
-                sample_time: 24,
+                status: 2,
+                last_full_charge: 3,
+                cycle_count: 4,
+                state: 5,
+                present_rate: 6,
+                remain_cap: 7,
+                present_volt: 8,
+                psr_state: 9,
+                psr_max_out: 10,
+                psr_max_in: 11,
+                peak_level: 12,
+                peak_power: 13,
+                sus_level: 14,
+                sus_power: 15,
+                peak_thres: 16,
+                sus_thres: 17,
+                trip_thres: 18,
+                bmc_data: 19,
+                bmd_data: 20,
+                bmd_flags: 21,
+                bmd_count: 22,
+                charge_time: 23,
+                run_time: 24,
+                sample_time: 25,
             },
             ..Default::default()
         };
@@ -560,6 +564,14 @@ mod tests {
             memory_map.batt.events,
             mem_map_to_battery_msg,
             BatteryMessage::Events
+        );
+        test_field!(
+            memory_map,
+            offset,
+            length,
+            memory_map.batt.status,
+            mem_map_to_battery_msg,
+            BatteryMessage::Status
         );
         test_field!(
             memory_map,
@@ -756,29 +768,30 @@ mod tests {
         let memory_map = ECMemory {
             batt: Battery {
                 events: 1,
-                last_full_charge: 2,
-                cycle_count: 3,
-                state: 4,
-                present_rate: 5,
-                remain_cap: 6,
-                present_volt: 7,
-                psr_state: 8,
-                psr_max_out: 9,
-                psr_max_in: 10,
-                peak_level: 11,
-                peak_power: 12,
-                sus_level: 13,
-                sus_power: 14,
-                peak_thres: 15,
-                sus_thres: 16,
-                trip_thres: 17,
-                bmc_data: 18,
-                bmd_data: 19,
-                bmd_flags: 20,
-                bmd_count: 21,
-                charge_time: 22,
-                run_time: 23,
-                sample_time: 24,
+                status: 2,
+                last_full_charge: 3,
+                cycle_count: 4,
+                state: 5,
+                present_rate: 6,
+                remain_cap: 7,
+                present_volt: 8,
+                psr_state: 9,
+                psr_max_out: 10,
+                psr_max_in: 11,
+                peak_level: 12,
+                peak_power: 13,
+                sus_level: 14,
+                sus_power: 15,
+                peak_thres: 16,
+                sus_thres: 17,
+                trip_thres: 18,
+                bmc_data: 19,
+                bmd_data: 20,
+                bmd_flags: 21,
+                bmd_count: 22,
+                charge_time: 23,
+                run_time: 24,
+                sample_time: 25,
             },
             ..Default::default()
         };
