@@ -9,7 +9,6 @@ embedded-cfu-protocol = { git = "https://github.com/OpenDevicePartnership/embedd
 embedded-services = { path = "../embedded-service" }
 
 # External dependencies
-binary_serde = "1.0.24"
 embassy-time = { git = "https://github.com/embassy-rs/embassy" }
 embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
 embassy-executor = { git = "https://github.com/embassy-rs/embassy" }
