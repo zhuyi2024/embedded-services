@@ -3,6 +3,7 @@ import sys,yaml
 # Function to convert YAML data to Rust structures
 def yaml_to_rust(data):
     rust_code = "//! EC Internal Data Structures\n\n"
+    rust_code += "#[allow(missing_docs)]\n"
     rust_code += "pub const EC_MEMMAP_VERSION: Version = Version {major: 0, minor: 1, spin: 0, res0: 0};\n\n"
     for key, value in data.items():
         rust_code += "#[allow(missing_docs)]\n"
