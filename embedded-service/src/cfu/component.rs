@@ -64,7 +64,7 @@ pub enum RequestData {
     /// Request for component's current FW version
     FwVersionRequest,
     /// Contains an offer for the component to evaluate
-    GiveOffer(FwUpdateOfferCommand),
+    GiveOffer(FwUpdateOffer),
     /// Contains bytes for an accepted fw offer
     GiveContent(FwUpdateContentCommand),
     /// Request for component to prepare itself for an update
@@ -205,14 +205,16 @@ impl<W: CfuWriter> CfuComponentDefault<W> {
         match self.device.wait_request().await {
             RequestData::FwVersionRequest => {
                 let fwv = self.get_fw_version().await.map_err(CfuError::ProtocolError)?;
-                let dev_inf = FwVerComponentInfo::new(fwv, self.get_component_id(), BankType::SingleBank);
+                let dev_inf = FwVerComponentInfo::new(fwv, self.get_component_id());
                 let mut comp_info: [FwVerComponentInfo; MAX_CMPT_COUNT] = [dev_inf; MAX_CMPT_COUNT];
+                let mut component_count = 1;
                 if self.is_primary_component() && self.get_subcomponents()[0].is_some() {
                     let arr = self
                         .get_subcomponents()
                         .iter()
                         .map(|x| x.unwrap_or_default())
                         .collect::<Vec<ComponentId, MAX_SUBCMPT_COUNT>>();
+                    component_count += arr.len();
                     for (index, id) in arr.iter().enumerate() {
                         //info!("Forwarding GetFwVersion command to sub-component: {}", id);
                         if let InternalResponseData::FwVersionResponse(fwv) =
@@ -225,18 +227,17 @@ impl<W: CfuWriter> CfuComponentDefault<W> {
                                 "Failed to get firmware version from sub-component: {}, adding dummy info to list",
                                 id
                             );*/
-                            comp_info[index + 1] = FwVerComponentInfo::new(
-                                FwVersion::default(),
-                                ComponentId::default(),
-                                BankType::SingleBank,
-                            );
+                            comp_info[index + 1] = FwVerComponentInfo::new(FwVersion::default(), index as u8 + 1);
                         }
                     }
                 }
+
                 let resp = GetFwVersionResponse {
-                    header: GetFwVersionResponseHeader::default(),
+                    header: GetFwVersionResponseHeader::new(
+                        component_count as u8,
+                        GetFwVerRespHeaderByte3::NoSpecialFlags,
+                    ),
                     component_info: comp_info,
-                    misc_and_protocol_version: 0,
                 };
                 self.device
                     .send_response(InternalResponseData::FwVersionResponse(resp))
@@ -250,7 +251,7 @@ impl<W: CfuWriter> CfuComponentDefault<W> {
             RequestData::GiveOffer(buf) => {
                 // accept any and all offers regardless of what version it is
                 if buf.component_info.component_id == self.get_component_id() {
-                    let resp = FwUpdateOfferResponse::new_accept(0);
+                    let resp = FwUpdateOfferResponse::new_accept(HostToken::Driver);
                     self.device
                         .send_response(InternalResponseData::OfferResponse(resp))
                         .await;
@@ -278,9 +279,7 @@ impl<W: CfuWriter> CfuComponentInfo for CfuComponentDefault<W> {
     fn get_fw_version(&self) -> impl Future<Output = Result<FwVersion, CfuProtocolError>> {
         default_get_fw_version()
     }
-    fn is_offer_valid(
-        &self,
-    ) -> impl Future<Output = Result<CfuOfferResponseStatus, (CfuOfferResponseStatus, RejectReason)>> {
+    fn is_offer_valid(&self) -> impl Future<Output = Result<OfferStatus, (OfferStatus, OfferRejectReason)>> {
         default_is_offer_valid()
     }
     fn is_dual_bank(&self) -> bool {
@@ -327,8 +326,8 @@ impl<W: CfuWriter> CfuComponentStorage for CfuComponentDefault<W> {
     }
 }
 
-async fn default_is_offer_valid() -> Result<CfuOfferResponseStatus, (CfuOfferResponseStatus, RejectReason)> {
-    Err((CfuOfferResponseStatus::ErrorNoOffer, RejectReason::RejectOldFw))
+async fn default_is_offer_valid() -> Result<OfferStatus, (OfferStatus, OfferRejectReason)> {
+    Err((OfferStatus::Reject, OfferRejectReason::OldFw))
 }
 async fn default_get_fw_version() -> Result<FwVersion, CfuProtocolError> {
     Ok(FwVersion::default())

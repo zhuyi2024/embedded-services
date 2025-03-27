@@ -1,6 +1,5 @@
 use core::future::Future;
 
-use binary_serde::{BinarySerde, Endianness};
 use embedded_cfu_protocol::components::CfuComponentTraits;
 use embedded_cfu_protocol::host::{CfuHostStates, CfuUpdater};
 use embedded_cfu_protocol::protocol_definitions::*;
@@ -21,7 +20,7 @@ pub trait CfuHost: CfuHostStates {
     ) -> impl Future<Output = Result<GetFwVersionResponse, CfuError>>;
     /// Goes through the offer list and returns a slice of offer responses
     fn process_cfu_offers<'a, T: CfuWriter>(
-        offer_commands: &'a [FwUpdateOfferCommand],
+        offer_commands: &'a [FwUpdateOffer],
         writer: &mut T,
     ) -> impl Future<Output = Result<&'a [FwUpdateOfferResponse], CfuError>>;
     /// For a specific component, update its content
@@ -48,22 +47,18 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHostInstance<I, C> {
             images: Vec::new(),
             writer: CfuWriterDefault::default(),
             primary_cmpt,
-            host_token: 0,
+            host_token: HostToken::Driver,
         }
     }
 }
 
 impl<I: CfuImage, C: CfuComponentTraits> CfuHostStates for CfuHostInstance<I, C> {
     async fn start_transaction<T: CfuWriter>(self, _writer: &mut T) -> Result<FwUpdateOfferResponse, CfuProtocolError> {
-        let component_id = self.primary_cmpt.get_component_id();
-        let _mock_cmd = FwUpdateOfferCommand::new_with_command(
-            self.host_token,
-            component_id,
-            FwVersion::default(),
-            0,
-            InformationCodeValues::StartOfferList,
-            0,
-        );
+        let _mock_cmd = FwUpdateOfferInformation::new(OfferInformationComponentInfo::new(
+            HostToken::Driver,
+            SpecialComponentIds::Info,
+            OfferInformationCodeValues::StartEntireTransaction,
+        ));
         let mockresponse = FwUpdateOfferResponse::default();
         Ok(mockresponse)
     }
@@ -71,29 +66,23 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHostStates for CfuHostInstance<I, C>
         self,
         writer: &mut T,
     ) -> Result<FwUpdateOfferResponse, CfuProtocolError> {
-        // Serialize FwUpdateOfferCommand to bytes, pull out componentid, host token
-        let component_id = self.primary_cmpt.get_component_id();
-        let mock_cmd = FwUpdateOfferCommand::new_with_command(
-            self.host_token,
-            component_id,
-            FwVersion::default(),
-            0,
-            InformationCodeValues::StartOfferList,
-            0,
-        );
-        let mut serialized_mock = [0u8; FwUpdateOfferCommand::SERIALIZED_SIZE];
-        FwUpdateOfferCommand::binary_serialize(&mock_cmd, &mut serialized_mock, Endianness::Little);
-        let mut read = [0u8; FwUpdateOfferResponse::SERIALIZED_SIZE];
-        //self.primary_cmpt.me.writer.write_read_to_component(Some(component_id), &serialized_mock, &mut read).await;
+        // Serialize FwUpdateOfferInformation to bytes
+        let mock_cmd = FwUpdateOfferInformation::new(OfferInformationComponentInfo::new(
+            HostToken::Driver,
+            SpecialComponentIds::Info,
+            OfferInformationCodeValues::StartOfferList,
+        ));
+        let serialized_mock: [u8; 16] = (&mock_cmd).into();
+
+        let mut read = [0u8; 16];
         if let Ok(_result) = writer.cfu_write_read(None, &serialized_mock, &mut read).await {
-            if let Ok(converted) = FwUpdateOfferResponse::binary_deserialize(&read, Endianness::Little) {
-                if converted.status != CfuOfferStatus::Accept {
-                    Err(CfuProtocolError::CfuStatusError(converted.status))
-                } else {
-                    Ok(converted)
-                }
+            // Collect offer response
+            let offer_response = FwUpdateOfferResponse::try_from(read)
+                .map_err(|_| CfuProtocolError::WriterError(CfuWriterError::ByteConversionError))?;
+            if offer_response.status != OfferStatus::Accept {
+                Err(CfuProtocolError::CfuOfferStatusError(offer_response.status))
             } else {
-                Err(CfuProtocolError::WriterError(CfuWriterError::ByteConversionError))
+                Ok(offer_response)
             }
         } else {
             Err(CfuProtocolError::WriterError(CfuWriterError::StorageError))
@@ -104,26 +93,18 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHostStates for CfuHostInstance<I, C>
         self,
         writer: &mut T,
     ) -> Result<FwUpdateOfferResponse, CfuProtocolError> {
-        let component_id = self.primary_cmpt.get_component_id();
-        let mock_cmd = FwUpdateOfferCommand::new_with_command(
-            self.host_token,
-            component_id,
-            FwVersion::default(),
-            0,
-            InformationCodeValues::EndOfferList,
-            0,
-        );
-        let mut serialized_mock = [0u8; FwUpdateOfferCommand::SERIALIZED_SIZE];
-        FwUpdateOfferCommand::binary_serialize(&mock_cmd, &mut serialized_mock, Endianness::Little);
-        let mut read = [0u8; FwUpdateOfferResponse::SERIALIZED_SIZE];
+        let mock_cmd = FwUpdateOfferInformation::new(OfferInformationComponentInfo::new(
+            HostToken::Driver,
+            SpecialComponentIds::Info,
+            OfferInformationCodeValues::EndOfferList,
+        ));
+        let serialized_mock: [u8; 16] = (&mock_cmd).into();
+        let mut read = [0u8; 16];
         if writer.cfu_write_read(None, &serialized_mock, &mut read).await.is_ok() {
-            // convert back to FwUpdateOfferResponse
-            if let Ok(converted) = FwUpdateOfferResponse::binary_deserialize(&read, Endianness::Little) {
-                Ok(converted)
-            } else {
-                // error deserializing the bytes that were read
-                Err(CfuProtocolError::WriterError(CfuWriterError::ByteConversionError))
-            }
+            // Collect offer response
+            let offer_response = FwUpdateOfferResponse::try_from(read)
+                .map_err(|_| CfuProtocolError::WriterError(CfuWriterError::ByteConversionError))?;
+            Ok(offer_response)
         } else {
             // unsuccessful write/read from the storage interface
             // use result.err() eventually
@@ -134,7 +115,7 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHostStates for CfuHostInstance<I, C>
     async fn verify_all_updates_completed(resps: &[FwUpdateOfferResponse]) -> Result<bool, CfuProtocolError> {
         let mut bad_components: heapless::Vec<u8, MAX_CMPT_COUNT> = Vec::new();
         for (i, r) in resps.iter().enumerate() {
-            if r.status != CfuOfferStatus::Reject {
+            if r.status != OfferStatus::Reject {
                 let _ = bad_components.push(i as u8);
             }
         }
@@ -157,7 +138,6 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHost for CfuHostInstance<I, C> {
         _writer: &mut T,
         primary_cmpt: ComponentId,
     ) -> Result<GetFwVersionResponse, CfuError> {
-        let mut vec: Vec<FwVerComponentInfo, MAX_CMPT_COUNT> = Vec::new();
         let mut component_count: u8 = 0;
         self.primary_cmpt.get_subcomponents().iter().for_each(|x| {
             if x.is_some() {
@@ -167,21 +147,24 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHost for CfuHostInstance<I, C> {
         let result = self.primary_cmpt.get_fw_version().await;
         if result.is_ok() {
             // convert bytes back to a GetFwVersionResponse
-            let inner = FwVerComponentInfo::new(
+            let primary_component_version_info = FwVerComponentInfo::new(
                 FwVersion {
                     major: 0,
                     minor: 1,
                     variant: 0,
                 },
                 primary_cmpt,
-                BankType::DualBank,
             );
-            let _ = vec.push(inner);
-            let arr = vec.into_array().unwrap();
-            let resp: GetFwVersionResponse = GetFwVersionResponse {
-                header: GetFwVersionResponseHeader::new(component_count, GetFwVerRespHeaderByte3::default()),
-                component_info: arr,
-                misc_and_protocol_version: 0,
+
+            let mut component_info = [FwVerComponentInfo::default(); MAX_CMPT_COUNT]; // Create an array with 7 default elements
+            component_info[0] = primary_component_version_info; // Set the first element to component_info
+
+            let resp = GetFwVersionResponse {
+                header: GetFwVersionResponseHeader::new(
+                    1, // Component count
+                    GetFwVerRespHeaderByte3::NoSpecialFlags,
+                ),
+                component_info,
             };
             Ok(resp)
         } else {
@@ -190,7 +173,7 @@ impl<I: CfuImage, C: CfuComponentTraits> CfuHost for CfuHostInstance<I, C> {
     }
 
     async fn process_cfu_offers<'a, T: CfuWriter>(
-        _offer_commands: &'a [FwUpdateOfferCommand],
+        _offer_commands: &'a [FwUpdateOffer],
         _writer: &mut T,
     ) -> Result<&'a [FwUpdateOfferResponse], CfuError> {
         // TODO
