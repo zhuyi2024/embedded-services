@@ -2,15 +2,15 @@ use embassy_executor::{Executor, Spawner};
 use embassy_sync::once_lock::OnceLock;
 use embassy_time::Timer;
 use embedded_services::power;
-use embedded_services::type_c::ucsi::lpm;
-use embedded_services::type_c::{controller, ControllerId, GlobalPortId as PortId};
-use embedded_usb_pd::PdError as Error;
+use embedded_services::type_c::{controller, ControllerId};
+use embedded_usb_pd::ucsi::lpm;
+use embedded_usb_pd::{GlobalPortId, PdError as Error};
 use log::*;
 use static_cell::StaticCell;
 
 const CONTROLLER0: ControllerId = ControllerId(0);
-const PORT0: PortId = PortId(0);
-const PORT1: PortId = PortId(1);
+const PORT0: PortId = GlobalPortId(0);
+const PORT1: PortId = GlobalPortId(1);
 const POWER0: power::policy::DeviceId = power::policy::DeviceId(0);
 
 mod test_controller {
@@ -34,7 +34,7 @@ mod test_controller {
     }
 
     impl<'a> Controller<'a> {
-        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &'a [PortId]) -> Self {
+        pub fn new(id: ControllerId, power_id: power::policy::DeviceId, ports: &'a [GlobalPortId]) -> Self {
             Self {
                 controller: controller::Device::new(id, ports),
                 power_policy: power::policy::device::Device::new(power_id),
@@ -85,7 +85,7 @@ mod test_controller {
 async fn controller_task() {
     static CONTROLLER: OnceLock<test_controller::Controller> = OnceLock::new();
 
-    static PORTS: [PortId; 2] = [PORT0, PORT1];
+    static PORTS: [GlobalPortId; 2] = [PORT0, PORT1];
 
     let controller = CONTROLLER.get_or_init(|| test_controller::Controller::new(CONTROLLER0, POWER0, &PORTS));
     controller::register_controller(controller).await.unwrap();
