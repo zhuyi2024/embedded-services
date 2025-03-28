@@ -7,11 +7,11 @@ use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::once_lock::OnceLock;
 use embassy_time::{with_timeout, Duration};
-use embedded_usb_pd::{Error, PdError, PortId as LocalPortId};
+use embedded_usb_pd::ucsi::lpm;
+use embedded_usb_pd::{Error, GlobalPortId, PdError, PortId as LocalPortId};
 
 use super::event::{PortEventFlags, PortEventKind};
-use super::ucsi::lpm;
-use super::{ControllerId, GlobalPortId};
+use super::ControllerId;
 use crate::intrusive_list;
 use crate::power::policy;
 
