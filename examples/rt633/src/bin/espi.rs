@@ -42,7 +42,7 @@ mod battery_service {
             let msg = message
                 .data
                 .get::<ec_type::message::BatteryMessage>()
-                .ok_or(comms::MailboxDelegateError::MessageNotFound);
+                .ok_or(comms::MailboxDelegateError::MessageNotFound)?;
 
             self.signal.signal(*msg);
 
