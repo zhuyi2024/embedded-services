@@ -21,7 +21,7 @@ use static_cell::StaticCell;
 use tps6699x::asynchronous::embassy as tps6699x;
 use type_c_service::driver::tps6699x::{self as tps6699x_driver, Tps66994Wrapper};
 
-extern crate embedded_services_examples;
+extern crate rt685s_evk_example;
 
 const CONTROLLER0_ID: ControllerId = ControllerId(0);
 const PORT0_ID: GlobalPortId = GlobalPortId(0);
@@ -75,7 +75,6 @@ mod battery {
                     info!("Consumer connected: {} {:?}", id.0, capability);
                     Ok(())
                 }
-                _ => Err(comms::MailboxDelegateError::InvalidData),
             }
         }
     }
@@ -103,7 +102,7 @@ async fn main(spawner: Spawner) {
     type_c::controller::init();
 
     info!("Spawining power policy task");
-    spawner.must_spawn(power_policy_service::task());
+    spawner.must_spawn(power_policy_service::task(Default::default()));
 
     let int_in = Input::new(p.PIO1_7, Pull::Up, Inverter::Disabled);
     static BUS: OnceLock<Mutex<NoopRawMutex, BusMaster<'static>>> = OnceLock::new();
