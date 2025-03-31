@@ -13,18 +13,21 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
     }
 
     /// Handle a new consumer contract
-    /// None of the event processing functions return errors to allow processing to continue for other ports on a controller
-    pub(super) async fn process_new_consumer_contract(&self, power: &policy::device::Device, status: &PortStatus) {
+    pub(super) async fn process_new_consumer_contract(
+        &self,
+        power: &policy::device::Device,
+        status: &PortStatus,
+    ) -> Result<(), Error<C::BusError>> {
         info!("New consumer contract");
 
         if let Some(contract) = status.contract {
             if !matches!(contract, Contract::Sink(_)) {
                 error!("Not a sink contract");
-                return;
+                return PdError::InvalidMode.into();
             }
         } else {
             error!("No contract");
-            return;
+            return PdError::InvalidMode.into();
         }
 
         let contract = status.contract.unwrap();
@@ -35,7 +38,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
             if let action::device::AnyState::Detached(state) = power.device_action().await {
                 if let Err(e) = state.attach().await {
                     error!("Error attaching power device: {:?}", e);
-                    return;
+                    return PdError::Failed.into();
                 }
             }
 
@@ -45,6 +48,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
                     .await
                 {
                     error!("Error setting power contract: {:?}", e);
+                    return PdError::Failed.into();
                 }
             } else if let Ok(state) = power.try_device_action::<action::ConnectedConsumer>().await {
                 if let Err(e) = state
@@ -52,11 +56,15 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
                     .await
                 {
                     error!("Error setting power contract: {:?}", e);
+                    return PdError::Failed.into();
                 }
             } else {
                 error!("Power device not in detached state");
+                return PdError::InvalidMode.into();
             }
         }
+
+        Ok(())
     }
 
     /// Wait for a power command

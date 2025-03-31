@@ -38,7 +38,11 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
 
     /// Handle a plug event
     /// None of the event processing functions return errors to allow processing to continue for other ports on a controller
-    async fn process_plug_event(&self, power: &policy::device::Device, status: &PortStatus) {
+    async fn process_plug_event(
+        &self,
+        power: &policy::device::Device,
+        status: &PortStatus,
+    ) -> Result<(), Error<C::BusError>> {
         info!("Plug event");
 
         if status.connection_present {
@@ -49,24 +53,29 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
                 warn!("Power device not in detached state, recovering");
                 if let Err(e) = power.detach().await {
                     error!("Error detaching power device: {:?}", e);
-                    return;
+                    return PdError::Failed.into();
                 }
             }
 
             if let Ok(state) = power.try_device_action::<action::Detached>().await {
                 if let Err(e) = state.attach().await {
                     error!("Error attaching power device: {:?}", e);
+                    return PdError::Failed.into();
                 }
             } else {
                 // This should never happen
                 error!("Power device not in detached state");
+                return PdError::InvalidMode.into();
             }
         } else {
             info!("Plug removed");
             if let Err(e) = power.detach().await {
                 error!("Error detaching power device: {:?}", e);
+                return PdError::Failed.into();
             };
         }
+
+        Ok(())
     }
 
     /// Process port events
@@ -117,12 +126,16 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
             };
 
             trace!("Port{} Interrupt: {:#?}", global_port_id.0, event);
-            if event.plug_inserted_or_removed() {
-                self.process_plug_event(power, &status).await;
+            if event.plug_inserted_or_removed() && self.process_plug_event(power, &status).await.is_err() {
+                error!("Port{}: Error processing plug event", global_port_id.0);
+                continue;
             }
 
-            if event.new_power_contract_as_consumer() {
-                self.process_new_consumer_contract(power, &status).await;
+            if event.new_power_contract_as_consumer()
+                && self.process_new_consumer_contract(power, &status).await.is_err()
+            {
+                error!("Port{}: Error processing new consumer contract", global_port_id.0);
+                continue;
             }
 
             self.active_events[port].set(event);
