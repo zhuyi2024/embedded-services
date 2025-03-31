@@ -17,7 +17,6 @@ embassy-time = { git = "https://github.com/embassy-rs/embassy", features = [
 ] }
 embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
 embassy-executor = { git = "https://github.com/embassy-rs/embassy", features = [
-    "task-arena-size-32768",
     "arch-std",
     "executor-thread",
     "log",
