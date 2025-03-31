@@ -3,7 +3,6 @@
 use core::array::from_fn;
 use core::cell::{Cell, RefCell};
 
-use bitfield::BitMut;
 use embassy_futures::select::{select3, select_array, Either3};
 use embedded_services::power::policy::device::StateKind;
 use embedded_services::power::policy::{self, action};
@@ -73,7 +72,7 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
     /// Process port events
     /// None of the event processing functions return errors to allow processing to continue for other ports on a controller
     async fn process_event(&self, controller: &mut C) {
-        let mut port_events = PortEventFlags(0);
+        let mut port_events = PortEventFlags::none();
 
         for port in 0..N {
             let local_port_id = LocalPortId(port as u8);
@@ -98,7 +97,7 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
                 continue;
             }
 
-            port_events.set_bit(global_port_id.0.into(), true);
+            port_events.pend_port(global_port_id);
 
             let status = match controller.get_port_status(local_port_id).await {
                 Ok(status) => status,

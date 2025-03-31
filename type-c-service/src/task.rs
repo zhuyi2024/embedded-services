@@ -1,6 +1,4 @@
 use core::cell::RefCell;
-
-use bitfield::Bit;
 use embassy_sync::once_lock::OnceLock;
 use embedded_services::{
     debug, error, info,
@@ -73,12 +71,12 @@ impl Service {
 
     /// Main processing function
     pub async fn process(&self) {
-        let events = self.context.get_unhandled_events().await;
+        let pending = self.context.get_unhandled_events().await;
 
-        for i in 0..events.len() {
+        for i in 0..pending.len() {
             let port_id = GlobalPortId(i as u8);
 
-            if !events.bit(i) {
+            if !pending.is_pending(port_id) {
                 continue;
             }
 

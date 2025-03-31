@@ -1,8 +1,7 @@
 //! Event definitions
-use core::ops::BitOr;
-
-use bitfield::{Bit, BitMut};
 use bitflags::bitflags;
+use bitvec::BitArr;
+use embedded_usb_pd::GlobalPortId;
 
 /// Port event kind
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -32,36 +31,49 @@ impl PortEventKind {
     }
 }
 
-/// Bit vector to store which ports have unhandled events
+/// Bit vector type to store pending port events
+type PortEventFlagsVec = BitArr!(for 32, in u32);
+
+/// Pending port events
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(transparent)]
-pub struct PortEventFlags(pub u32);
+pub struct PortEventFlags(PortEventFlagsVec);
 
 impl PortEventFlags {
+    /// Creates a new PortEventFlags with no pending events
+    pub const fn none() -> Self {
+        Self(PortEventFlagsVec::ZERO)
+    }
+
+    /// Returns true if there are no pending events
+    pub fn is_none(&self) -> bool {
+        self.0 == PortEventFlagsVec::ZERO
+    }
+
+    /// Marks the given port as pending
+    pub fn pend_port(&mut self, port: GlobalPortId) {
+        self.0.set(port.0 as usize, true);
+    }
+
+    /// Returns true if the given port is pending
+    pub fn is_pending(&self, port: GlobalPortId) -> bool {
+        self.0[port.0 as usize]
+    }
+
+    /// Returns a combination of the current event flags and other
+    pub fn union(&self, other: PortEventFlags) -> PortEventFlags {
+        PortEventFlags(self.0 | other.0)
+    }
+
     /// Returns the number of bits in the event
     #[allow(clippy::len_without_is_empty)]
-    pub const fn len(&self) -> usize {
-        size_of::<Self>() * 8
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 }
 
-impl BitMut for PortEventFlags {
-    fn set_bit(&mut self, bit: usize, value: bool) {
-        self.0.set_bit(bit, value);
-    }
-}
-
-impl Bit for PortEventFlags {
-    fn bit(&self, bit: usize) -> bool {
-        self.0.bit(bit)
-    }
-}
-
-impl BitOr for PortEventFlags {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        PortEventFlags(self.0 | rhs.0)
+impl From<PortEventFlags> for u32 {
+    fn from(flags: PortEventFlags) -> Self {
+        flags.0.data[0]
     }
 }

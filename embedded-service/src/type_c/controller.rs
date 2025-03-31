@@ -186,10 +186,11 @@ impl<'a> Device<'a> {
 
     /// Notify that there are pending events on one or more ports
     /// Each bit corresponds to a global port ID
-    pub async fn notify_ports(&self, events: PortEventFlags) {
-        trace!("Notify ports: {:#x}", events.0);
+    pub async fn notify_ports(&self, pending: PortEventFlags) {
+        let raw_pending: u32 = pending.into();
+        trace!("Notify ports: {:#x}", raw_pending);
         // Early exit if no events
-        if events.0 == 0 {
+        if pending.is_none() {
             return;
         }
 
@@ -198,9 +199,9 @@ impl<'a> Device<'a> {
         context
             .port_events
             .signal(if let Some(flags) = context.port_events.try_take() {
-                flags | events
+                flags.union(pending)
             } else {
-                events
+                pending
             });
     }
 
