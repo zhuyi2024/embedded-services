@@ -1,33 +1,49 @@
 //! Event definitions
-use bitflags::bitflags;
+use bitfield::bitfield;
 use bitvec::BitArr;
 use embedded_usb_pd::GlobalPortId;
 
-/// Port event kind
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct PortEventKind(pub u32);
-
-bitflags! {
-    impl PortEventKind: u32 {
-         /// None
-        const NONE = 0;
-        /// Plug inserted or removed
-        const PLUG_INSERTED_OR_REMOVED = (1 << 0);
-        /// New contract as consumer
-        const NEW_POWER_CONTRACT_AS_CONSUMER = (1 << 3);
-    }
+bitfield! {
+    /// Raw bitfield of possible port events
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    struct PortEventKindRaw(u32);
+    impl Debug;
+    /// Plug inserted or removed
+    pub u8, plug_inserted_or_removed, set_plug_inserted_or_removed: 0, 0;
+    /// New power contract as consumer
+    pub u8, new_power_contract_as_consumer, set_new_power_contract_as_consumer: 3, 3;
 }
 
+/// Type-safe wrapper for the raw port event kind
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct PortEventKind(PortEventKindRaw);
+
 impl PortEventKind {
+    /// Create a new PortEventKind with no pending events
+    pub const fn none() -> Self {
+        Self(PortEventKindRaw(0))
+    }
+
     /// Returns true if a plug was inserted or removed
     pub fn plug_inserted_or_removed(self) -> bool {
-        self & Self::PLUG_INSERTED_OR_REMOVED != Self::NONE
+        self.0.plug_inserted_or_removed() != 0
+    }
+
+    /// Sets the plug inserted or removed event
+    pub fn set_plug_inserted_or_removed(&mut self, value: bool) {
+        self.0.set_plug_inserted_or_removed(value.into());
     }
 
     /// Returns true if a new power contract was established as consumer
     pub fn new_power_contract_as_consumer(self) -> bool {
-        self & Self::NEW_POWER_CONTRACT_AS_CONSUMER != Self::NONE
+        self.0.new_power_contract_as_consumer() != 0
+    }
+
+    /// Sets the new power contract as consumer event
+    pub fn set_new_power_contract_as_consumer(&mut self, value: bool) {
+        self.0.set_new_power_contract_as_consumer(value.into());
     }
 }
 

@@ -26,7 +26,7 @@ pub struct Tps6699x<'a, const N: usize, M: RawMutex, B: I2c> {
 impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
     fn new(tps6699x: tps6699x::Tps6699x<'a, M, B>) -> Self {
         Self {
-            port_events: [PortEventKind::NONE; N],
+            port_events: [PortEventKind::none(); N],
             tps6699x,
         }
     }
@@ -46,12 +46,12 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, 
 
             if interrupt.plug_event() {
                 debug!("Plug event");
-                *event |= PortEventKind::PLUG_INSERTED_OR_REMOVED;
+                event.set_plug_inserted_or_removed(true);
             }
 
             if interrupt.new_consumer_contract() {
                 debug!("New consumer contract");
-                *event |= PortEventKind::NEW_POWER_CONTRACT_AS_CONSUMER;
+                event.set_new_power_contract_as_consumer(true);
             }
         }
         Ok(())
@@ -64,7 +64,7 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, 
         }
 
         let event = self.port_events[port.0 as usize];
-        self.port_events[port.0 as usize] = PortEventKind::NONE;
+        self.port_events[port.0 as usize] = PortEventKind::none();
 
         Ok(event)
     }

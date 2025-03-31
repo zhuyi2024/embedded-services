@@ -45,8 +45,11 @@ mod test_controller {
                 connection_present: true,
                 debug_connection: false,
             });
-            self.events
-                .signal(PortEventKind::PLUG_INSERTED_OR_REMOVED | PortEventKind::NEW_POWER_CONTRACT_AS_CONSUMER);
+
+            let mut events = PortEventKind::none();
+            events.set_plug_inserted_or_removed(true);
+            events.set_new_power_contract_as_consumer(true);
+            self.events.signal(events);
         }
 
         /// Simulate a sink connecting
@@ -57,7 +60,10 @@ mod test_controller {
         /// Simulate a disconnection
         pub fn disconnect(&self) {
             self.status.set(PortStatus::default());
-            self.events.signal(PortEventKind::PLUG_INSERTED_OR_REMOVED);
+
+            let mut events = PortEventKind::none();
+            events.set_plug_inserted_or_removed(true);
+            self.events.signal(events);
         }
     }
 
@@ -70,7 +76,7 @@ mod test_controller {
         pub fn new(state: &'a ControllerState) -> Self {
             Self {
                 state,
-                events: Cell::new(PortEventKind::NONE),
+                events: Cell::new(PortEventKind::none()),
             }
         }
     }
@@ -81,15 +87,15 @@ mod test_controller {
         async fn wait_port_event(&mut self) -> Result<(), Error<Self::BusError>> {
             trace!("Wait for port event");
             let events = self.state.events.wait().await;
-            trace!("Port event: {:#x}", events.0);
+            trace!("Port event: {:#?}", events);
             self.events.set(events);
             Ok(())
         }
 
         async fn clear_port_events(&mut self, _port: LocalPortId) -> Result<PortEventKind, Error<Self::BusError>> {
             let events = self.events.get();
-            debug!("Clear port events: {:#x}", events.0);
-            self.events.set(PortEventKind::NONE);
+            debug!("Clear port events: {:#?}", events);
+            self.events.set(PortEventKind::none());
             Ok(events)
         }
 

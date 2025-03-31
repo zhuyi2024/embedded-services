@@ -32,7 +32,7 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
             pd_controller,
             power,
             controller: RefCell::new(controller),
-            active_events: [const { Cell::new(PortEventKind::NONE) }; N],
+            active_events: [const { Cell::new(PortEventKind::none()) }; N],
         }
     }
 
@@ -92,8 +92,8 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
                 }
             };
 
-            if event == PortEventKind::NONE {
-                self.active_events[port].set(PortEventKind::NONE);
+            if event == PortEventKind::none() {
+                self.active_events[port].set(PortEventKind::none());
                 continue;
             }
 

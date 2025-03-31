@@ -13,7 +13,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
             },
             controller::PortCommandData::ClearEvents => {
                 let event = self.active_events[0].get();
-                self.active_events[0].set(PortEventKind::NONE);
+                self.active_events[0].set(PortEventKind::none());
                 Ok(controller::PortResponseData::ClearEvents(event))
             }
         };
