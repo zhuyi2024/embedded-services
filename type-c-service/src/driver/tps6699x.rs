@@ -2,7 +2,7 @@ use core::array::from_fn;
 use core::iter::zip;
 
 use ::tps6699x::registers::field_sets::IntEventBus1;
-use ::tps6699x::registers::PlugMode;
+use ::tps6699x::registers::{PdCcPullUp, PlugMode};
 use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embedded_hal_async::i2c::I2c;
@@ -26,7 +26,7 @@ pub struct Tps6699x<'a, const N: usize, M: RawMutex, B: I2c> {
 impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
     fn new(tps6699x: tps6699x::Tps6699x<'a, M, B>) -> Self {
         Self {
-            port_events: [PortEventKind::NONE; N],
+            port_events: [PortEventKind::none(); N],
             tps6699x,
         }
     }
@@ -46,12 +46,12 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, 
 
             if interrupt.plug_event() {
                 debug!("Plug event");
-                *event |= PortEventKind::PLUG_INSERTED_OR_REMOVED;
+                event.set_plug_inserted_or_removed(true);
             }
 
             if interrupt.new_consumer_contract() {
                 debug!("New consumer contract");
-                *event |= PortEventKind::NEW_POWER_CONTRACT_AS_CONSUMER;
+                event.set_new_power_contract_as_consumer(true);
             }
         }
         Ok(())
@@ -64,7 +64,7 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, 
         }
 
         let event = self.port_events[port.0 as usize];
-        self.port_events[port.0 as usize] = PortEventKind::NONE;
+        self.port_events[port.0 as usize] = PortEventKind::none();
 
         Ok(event)
     }
@@ -121,16 +121,20 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'a, N, M, 
                     Contract::from(pdo)
                 });
             } else {
-                // Determine implicit/default contract
-                port_status.contract = Some(if pd_status.is_source() {
+                if pd_status.is_source() {
                     let current = TypecCurrent::try_from(port_control.typec_current()).map_err(Error::Pd)?;
                     debug!("Port{} type-C source current: {:#?}", port.0, current);
-                    Contract::Source(PowerCapability::from(current))
+                    port_status.contract = Some(Contract::Source(PowerCapability::from(current)))
                 } else {
-                    let current = TypecCurrent::try_from(pd_status.cc_pull_up()).map_err(Error::Pd)?;
-                    debug!("Port{} type-C sink current: {:#?}", port.0, current);
-                    Contract::Sink(PowerCapability::from(current))
-                });
+                    let pull = pd_status.cc_pull_up();
+                    if pull == PdCcPullUp::NoPull {
+                        port_status.contract = None
+                    } else {
+                        let current = TypecCurrent::try_from(pd_status.cc_pull_up()).map_err(Error::Pd)?;
+                        debug!("Port{} type-C sink current: {:#?}", port.0, current);
+                        port_status.contract = Some(Contract::Sink(PowerCapability::from(current)))
+                    }
+                }
             }
         }
 

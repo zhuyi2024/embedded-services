@@ -10,6 +10,7 @@ rust-version = "1.85"
 [dependencies]
 bitfield.workspace = true
 bitflags.workspace = true
+bitvec.workspace = true
 cfg-if.workspace = true
 chrono = { workspace = true, optional = true }
 critical-section.workspace = true
