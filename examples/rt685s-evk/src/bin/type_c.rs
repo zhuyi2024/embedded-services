@@ -12,7 +12,7 @@ use embassy_imxrt::{bind_interrupts, peripherals};
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::once_lock::OnceLock;
-use embassy_time as _;
+use embassy_time::{self as _, Delay};
 use embedded_services::comms;
 use embedded_services::power::policy::DeviceId as PowerId;
 use embedded_services::type_c::{self, ControllerId};
