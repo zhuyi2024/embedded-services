@@ -71,12 +71,7 @@ mod test_controller {
             Ok(match command.data {
                 controller::PortCommandData::PortStatus => {
                     info!("Port status for port {}", command.port.0);
-                    controller::PortResponseData::PortStatus(PortStatus {
-                        connection_present: false,
-                        contract: None,
-                        debug_connection: false,
-                        dual_power: false,
-                    })
+                    controller::PortResponseData::PortStatus(PortStatus::new())
                 }
                 _ => {
                     info!("Port command for port {}", command.port.0);
