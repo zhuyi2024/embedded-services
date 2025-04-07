@@ -147,7 +147,11 @@ async fn main(spawner: Spawner) {
 
     static CONTROLLER: StaticCell<Controller<'static>> = StaticCell::new();
     let controller = CONTROLLER.init(Controller::new_tps66994(device, ADDR0).unwrap());
-    let (tps6699x, interrupt) = controller.make_parts();
+    let (mut tps6699x, interrupt) = controller.make_parts();
+
+    info!("Resetting PD controller");
+    let mut delay = Delay;
+    tps6699x.reset(&mut delay).await.unwrap();
 
     info!("Spawining interrupt task");
     spawner.must_spawn(interrupt_task(int_in, interrupt));
