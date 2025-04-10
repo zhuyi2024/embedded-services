@@ -57,6 +57,8 @@ mod test_controller {
                     Ok(controller::InternalResponseData::Status(ControllerStatus {
                         mode: "Test",
                         valid_fw_bank: true,
+                        fw_version0: 0xbadf00d,
+                        fw_version1: 0xdeadbeef,
                     }))
                 }
             }

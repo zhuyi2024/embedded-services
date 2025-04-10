@@ -163,6 +163,10 @@ pub struct ControllerStatus<'a> {
     pub mode: &'a str,
     /// True if we did not have to boot from a backup FW bank
     pub valid_fw_bank: bool,
+    /// FW version 0
+    pub fw_version0: u32,
+    /// FW version 1
+    pub fw_version1: u32,
 }
 
 /// PD controller
@@ -303,6 +307,10 @@ pub trait Controller {
         port: LocalPortId,
         role: PowerRole,
     ) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
+    /// Get current controller status
+    fn get_controller_status(
+        &mut self,
+    ) -> impl Future<Output = Result<ControllerStatus<'static>, Error<Self::BusError>>>;
 }
 
 /// Internal context for managing PD controllers

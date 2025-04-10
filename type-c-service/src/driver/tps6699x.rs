@@ -5,12 +5,13 @@ use core::iter::zip;
 use ::tps6699x::registers::field_sets::IntEventBus1;
 use ::tps6699x::registers::{PdCcPullUp, PlugMode};
 use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
+use bitfield::bitfield;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embassy_sync::signal::Signal;
 use embedded_hal_async::i2c::I2c;
 use embedded_services::power::policy::{self, PowerCapability};
-use embedded_services::type_c::controller::{self, Controller, PortStatus};
+use embedded_services::type_c::controller::{self, Controller, ControllerStatus, PortStatus};
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::ControllerId;
 use embedded_services::{debug, info, trace, type_c};
@@ -285,6 +286,21 @@ impl<const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'_, N, M, B> {
 
         tps6699x.set_port_control(port, control).await
     }
+
+    #[allow(clippy::await_holding_refcell_ref)]
+    async fn get_controller_status(&mut self) -> Result<ControllerStatus<'static>, Error<Self::BusError>> {
+        let mut tps6699x = self.tps6699x.borrow_mut();
+        let boot_flags = tps6699x.get_boot_flags().await?;
+        let customer_use = CustomerUse(tps6699x.get_customer_use().await?);
+
+        Ok(ControllerStatus {
+            mode: tps6699x.get_mode().await?.into(),
+            valid_fw_bank: (boot_flags.active_bank() == 0 && boot_flags.bank0_valid() != 0)
+                || (boot_flags.active_bank() == 1 && boot_flags.bank1_valid() != 0),
+            fw_version0: customer_use.ti_fw_version(),
+            fw_version1: customer_use.custom_fw_version(),
+        })
+    }
 }
 
 /// TPS66994 controller wrapper
@@ -327,4 +343,16 @@ pub fn tps66993<'a, M: RawMutex, B: I2c>(
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
+}
+
+bitfield! {
+    /// Custom customer use format
+    //#[derive(Clone, Copy)]
+    //#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    struct CustomerUse(u64);
+    impl Debug;
+    /// Custom FW version
+    pub u32, custom_fw_version, set_custom_fw_version: 31, 0;
+    /// TI FW version
+    pub u32, ti_fw_version, set_ti_fw_version: 63, 32;
 }

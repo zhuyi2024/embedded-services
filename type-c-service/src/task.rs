@@ -6,9 +6,10 @@ use embedded_services::{
     debug, error, info,
     type_c::{
         self,
-        controller::{ControllerStatus, PortStatus},
+        controller::PortStatus,
         event::PortEventFlags,
-        external::{self, PortResponseData},
+        external::{self, ControllerCommandData, PortResponseData},
+        ControllerId,
     },
 };
 use embedded_usb_pd::GlobalPortId;
@@ -114,18 +115,32 @@ impl Service {
         }
     }
 
+    /// Process external controller status command
+    async fn process_external_controller_status(&self, controller: ControllerId) -> Result<(), Error> {
+        let status = self.context.get_controller_status(controller).await;
+        if let Err(e) = status {
+            error!("Error getting controller status: {:#?}", e);
+        }
+
+        self.context
+            .send_external_response(external::Response::Controller(
+                status.map(external::ControllerResponseData::ControllerStatus),
+            ))
+            .await;
+
+        Ok(())
+    }
+
     /// Process external controller commands
     async fn process_external_controller_command(&self, command: external::ControllerCommand) {
         debug!("Processing external controller command: {:#?}", command);
-        // TODO: flesh this out
-        self.context
-            .send_external_response(external::Response::Controller(Ok(
-                external::ControllerResponseData::ControllerStatus(ControllerStatus {
-                    mode: "Normal",
-                    valid_fw_bank: true,
-                }),
-            )))
-            .await
+        match command.data {
+            ControllerCommandData::ControllerStatus => {
+                if let Err(e) = self.process_external_controller_status(command.id).await {
+                    error!("Error processing external controller status command: {:#?}", e);
+                }
+            }
+        }
     }
 
     /// Process external port commands

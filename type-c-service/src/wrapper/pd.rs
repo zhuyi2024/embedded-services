@@ -1,3 +1,4 @@
+use embedded_services::type_c::controller::InternalResponseData;
 use embedded_usb_pd::ucsi::lpm;
 
 use super::*;
@@ -25,8 +26,12 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
             .await;
     }
 
-    async fn process_controller_command(&self, _controller: &mut C, command: controller::InternalCommandData) {
+    async fn process_controller_command(&self, controller: &mut C, command: controller::InternalCommandData) {
         let response = match command {
+            controller::InternalCommandData::Status => {
+                let status = controller.get_controller_status().await;
+                controller::Response::Controller(status.map(InternalResponseData::Status).map_err(|_| PdError::Failed))
+            }
             _ => controller::Response::Controller(Err(PdError::UnrecognizedCommand)),
         };
 
