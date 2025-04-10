@@ -9,7 +9,8 @@ use embassy_sync::signal::Signal;
 use embassy_time::{with_timeout, Duration};
 use embedded_usb_pd::ucsi::lpm;
 use embedded_usb_pd::{
-    type_c::Current as TypecCurrent, Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole,
+    type_c::ConnectionState, type_c::Current as TypecCurrent, Error, GlobalPortId, PdError, PortId as LocalPortId,
+    PowerRole,
 };
 
 use super::event::{PortEventFlags, PortEventKind};
@@ -35,10 +36,8 @@ pub struct PortStatus {
     pub available_source_contract: Option<policy::PowerCapability>,
     /// Current available sink contract
     pub available_sink_contract: Option<policy::PowerCapability>,
-    /// Connection present
-    pub connection_present: bool,
-    /// Debug connection
-    pub debug_connection: bool,
+    /// Current connection state
+    pub connection_state: Option<ConnectionState>,
     /// Port partner supports dual-power roles
     pub dual_power: bool,
 }
@@ -50,10 +49,24 @@ impl PortStatus {
         Self {
             available_source_contract: None,
             available_sink_contract: None,
-            connection_present: false,
-            debug_connection: false,
+            connection_state: None,
             dual_power: false,
         }
+    }
+
+    /// Check if the port is connected
+    pub fn is_connected(&self) -> bool {
+        matches!(
+            self.connection_state,
+            Some(ConnectionState::Attached)
+                | Some(ConnectionState::DebugAccessory)
+                | Some(ConnectionState::AudioAccessory)
+        )
+    }
+
+    /// Check if a debug accessory is connected
+    pub fn is_debug_accessory(&self) -> bool {
+        matches!(self.connection_state, Some(ConnectionState::DebugAccessory))
     }
 }
 

@@ -3,7 +3,7 @@ use core::cell::{Cell, RefCell};
 use core::iter::zip;
 
 use ::tps6699x::registers::field_sets::IntEventBus1;
-use ::tps6699x::registers::{PdCcPullUp, PlugMode};
+use ::tps6699x::registers::PdCcPullUp;
 use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
 use bitfield::bitfield;
 use embassy_futures::select::select;
@@ -60,19 +60,12 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
         let mut port_status = PortStatus::default();
 
         let plug_present = status.plug_present();
-        let valid_connection = matches!(
-            status.connection_state(),
-            PlugMode::Audio | PlugMode::Debug | PlugMode::ConnectedNoRa | PlugMode::Connected
-        );
+        port_status.connection_state = status.connection_state().try_into().ok();
 
         debug!("Port{} Plug present: {}", port.0, plug_present);
-        debug!("Port{} Valid connection: {}", port.0, valid_connection);
+        debug!("Port{} Valid connection: {}", port.0, port_status.is_connected());
 
-        port_status.connection_present = plug_present && valid_connection;
-
-        if port_status.connection_present {
-            port_status.debug_connection = status.connection_state() == PlugMode::Debug;
-
+        if port_status.is_connected() {
             // Determine current contract if any
             let pdo_raw = tps6699x.get_active_pdo_contract(port).await?.active_pdo();
             info!("Raw PDO: {:#X}", pdo_raw);

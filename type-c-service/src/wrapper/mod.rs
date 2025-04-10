@@ -56,7 +56,7 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
         }
 
         info!("Plug event");
-        if status.connection_present {
+        if status.is_connected() {
             info!("Plug inserted");
 
             // Recover if we're not in the correct state

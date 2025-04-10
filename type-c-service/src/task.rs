@@ -75,15 +75,15 @@ impl Service {
         debug!("Port{} Previous status: {:#?}", port_id.0, old_status);
         debug!("Port{} Status: {:#?}", port_id.0, status);
 
-        let connection_changed = status.connection_present != old_status.connection_present;
-        if connection_changed && (status.debug_connection || old_status.debug_connection) {
+        let connection_changed = status.is_connected() != old_status.is_connected();
+        if connection_changed && (status.is_debug_accessory() || old_status.is_debug_accessory()) {
             // Notify that a debug connection has connected/disconnected
             let msg = type_c::comms::DebugAccessoryMessage {
                 port: port_id,
-                connected: status.connection_present,
+                connected: status.is_connected(),
             };
 
-            if status.connection_present {
+            if status.is_connected() {
                 debug!("Port{}: Debug accessory connected", port_id.0);
             } else {
                 debug!("Port{}: Debug accessory disconnected", port_id.0);
