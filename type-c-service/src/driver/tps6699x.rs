@@ -123,6 +123,11 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
 
                 port_status.available_sink_contract = new_contract;
             }
+
+            // Update alt-mode status
+            let alt_mode = tps6699x.get_alt_mode_status(port).await?;
+            debug!("Port{} alt mode: {:#?}", port.0, alt_mode);
+            port_status.alt_mode = alt_mode;
         }
 
         self.port_status[port.0 as usize].set(port_status);
