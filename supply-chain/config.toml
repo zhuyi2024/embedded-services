@@ -41,10 +41,6 @@ audit-as-crates-io = true
 version = "0.8.11"
 criteria = "safe-to-deploy"
 
-[[exemptions.anyhow]]
-version = "1.0.97"
-criteria = "safe-to-deploy"
-
 [[exemptions.arraydeque]]
 version = "0.5.1"
 criteria = "safe-to-deploy"
@@ -303,10 +299,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.mimxrt600-fcb]]
 version = "0.2.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.mimxrt633s-pac]]
-version = "0.4.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.mimxrt685s-pac]]

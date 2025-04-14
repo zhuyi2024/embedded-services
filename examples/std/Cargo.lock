@@ -25,9 +25,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.97"
+version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
 name = "arraydeque"
@@ -124,18 +124,18 @@ checksum = "f798d2d157e547aa99aab0967df39edd0b70307312b6f8bd2848e6abe40896e0"
 
 [[package]]
 name = "bitfield"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7e6caee68becd795bfd65f1a026e4d00d8f0c2bc9be5eb568e1015f9ce3c34"
+checksum = "786e53b0c071573a28956cec19a92653e42de34c683e2f6e86c197a349fba318"
 dependencies = [
  "bitfield-macros",
 ]
 
 [[package]]
 name = "bitfield-macros"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "331afbb18ce7b644c0b428726d369c5dd37ca0b815d72a459fcc2896c3c8ad32"
+checksum = "07805405d3f1f3a55aab895718b488821d40458f9188059909091ae0935c344a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -263,9 +263,9 @@ checksum = "43da5946c66ffcc7745f48db692ffbb10a83bfe0afd96235c5c2a4fb23994929"
 
 [[package]]
 name = "darling"
-version = "0.20.10"
+version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f63b86c8a8826a49b8c21f08a2d07338eec8d900540f8630dc76284be802989"
+checksum = "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee"
 dependencies = [
  "darling_core",
  "darling_macro",
@@ -273,9 +273,9 @@ dependencies = [
 
 [[package]]
 name = "darling_core"
-version = "0.20.10"
+version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95133861a8032aaea082871032f5815eb9e98cef03fa916ab4500513994df9e5"
+checksum = "0d00b9596d185e565c2207a0b01f8bd1a135483d02d9b7b0a54b11da8d53412e"
 dependencies = [
  "fnv",
  "ident_case",
@@ -287,9 +287,9 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.20.10"
+version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d336a2a514f6ccccaa3e09b02d41d35330c07ddf03a62165fcec10bb561c7806"
+checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
 dependencies = [
  "darling_core",
  "quote",
@@ -361,7 +361,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "embassy-executor"
 version = "0.7.0"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "critical-section",
  "document-features",
@@ -372,7 +372,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-macros"
 version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -383,7 +383,7 @@ dependencies = [
 [[package]]
 name = "embassy-futures"
 version = "0.1.1"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "log",
 ]
@@ -391,7 +391,7 @@ dependencies = [
 [[package]]
 name = "embassy-sync"
 version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -405,7 +405,7 @@ dependencies = [
 [[package]]
 name = "embassy-time"
 version = "0.4.0"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -422,7 +422,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-driver"
 version = "0.2.0"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "document-features",
 ]
@@ -430,7 +430,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-queue-utils"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/embassy#3a3ab6cded53f84ffd6144840714d0631217df18"
+source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
 dependencies = [
  "embassy-executor",
  "heapless 0.8.0",
@@ -458,7 +458,7 @@ dependencies = [
 [[package]]
 name = "embedded-cfu-protocol"
 version = "0.1.0"
-source = "git+https://github.com/OpenDevicePartnership/embedded-cfu#3ae19bb02eee75eface86acd89dbdf3252ec907f"
+source = "git+https://github.com/OpenDevicePartnership/embedded-cfu#2a08534a094aab2b0d4d223435e03c538d45384e"
 dependencies = [
  "embedded-io-async",
  "log",
@@ -589,9 +589,9 @@ dependencies = [
 [[package]]
 name = "embedded-usb-pd"
 version = "0.1.0"
-source = "git+https://github.com/OpenDevicePartnership/embedded-usb-pd#d91252d11f60cb6dabb123472ce23b7a745488d8"
+source = "git+https://github.com/OpenDevicePartnership/embedded-usb-pd#b57a8293f9d064363136f320f0a6d85a7def5e35"
 dependencies = [
- "bitfield 0.18.1",
+ "bitfield 0.19.0",
  "embedded-hal-async",
 ]
 
@@ -673,9 +673,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7db2ff139bba50379da6aa0766b52fdcb62cb5b263009b09ed58ba604e14bbd1"
+checksum = "459196ed295495a68f7d7fe1d84f6c4b7ff0e21fe3017b2f283c6fac3ad803c9"
 dependencies = [
  "cfg-if",
  "crunchy",
@@ -773,9 +773,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.171"
+version = "0.2.172"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
+checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 
 [[package]]
 name = "litrs"
@@ -1137,9 +1137,10 @@ dependencies = [
 [[package]]
 name = "tps6699x"
 version = "0.1.0"
-source = "git+https://github.com/OpenDevicePartnership/tps6699x#01c61492ec1a5afded8f98525f2a300ee07bed24"
+source = "git+https://github.com/OpenDevicePartnership/tps6699x#aa42e1dd71dca6acefb2c0a0d53703dd49f9bb06"
 dependencies = [
  "bincode",
+ "bitfield 0.19.0",
  "device-driver",
  "embassy-sync",
  "embassy-time",
