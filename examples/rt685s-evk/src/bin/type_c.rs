@@ -156,6 +156,19 @@ async fn main(spawner: Spawner) {
     info!("Spawining interrupt task");
     spawner.must_spawn(interrupt_task(int_in, interrupt));
 
+    // These aren't enabled by default
+    tps6699x
+        .modify_interrupt_mask_all(|mask| {
+            mask.set_am_entered(true);
+            mask.set_dp_sid_status_updated(true);
+            mask.set_intel_vid_status_updated(true);
+            mask.set_usb_status_updated(true);
+            mask.set_power_path_switch_changed(true);
+            *mask
+        })
+        .await
+        .unwrap();
+
     static PD_PORTS: [GlobalPortId; 2] = [PORT0_ID, PORT1_ID];
 
     info!("Spawining PD controller task");
@@ -177,4 +190,16 @@ async fn main(spawner: Spawner) {
     comms::register_endpoint(debug_accessory, &debug_accessory.tp)
         .await
         .unwrap();
+
+    embassy_time::Timer::after_secs(10).await;
+
+    let status = type_c::external::get_controller_status(CONTROLLER0_ID).await.unwrap();
+
+    info!("Controller status: {:?}", status);
+
+    let status = type_c::external::get_port_status(PORT0_ID).await.unwrap();
+    info!("Port status: {:?}", status);
+
+    let status = type_c::external::get_port_status(PORT1_ID).await.unwrap();
+    info!("Port status: {:?}", status);
 }
