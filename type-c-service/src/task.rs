@@ -116,7 +116,7 @@ impl Service {
     }
 
     /// Process external controller status command
-    async fn process_external_controller_status(&self, controller: ControllerId) -> Result<(), Error> {
+    async fn process_external_controller_status(&self, controller: ControllerId) {
         let status = self.context.get_controller_status(controller).await;
         if let Err(e) = status {
             error!("Error getting controller status: {:#?}", e);
@@ -127,24 +127,18 @@ impl Service {
                 status.map(external::ControllerResponseData::ControllerStatus),
             ))
             .await;
-
-        Ok(())
     }
 
     /// Process external controller commands
     async fn process_external_controller_command(&self, command: external::ControllerCommand) {
         debug!("Processing external controller command: {:#?}", command);
         match command.data {
-            ControllerCommandData::ControllerStatus => {
-                if let Err(e) = self.process_external_controller_status(command.id).await {
-                    error!("Error processing external controller status command: {:#?}", e);
-                }
-            }
+            ControllerCommandData::ControllerStatus => self.process_external_controller_status(command.id).await,
         }
     }
 
     /// Process external port status command
-    async fn process_external_port_status(&self, port_id: GlobalPortId) -> Result<(), Error> {
+    async fn process_external_port_status(&self, port_id: GlobalPortId) {
         let status = self.context.get_port_status(port_id).await;
         if let Err(e) = status {
             error!("Error getting port status: {:#?}", e);
@@ -155,19 +149,13 @@ impl Service {
                 status.map(external::PortResponseData::PortStatus),
             ))
             .await;
-
-        Ok(())
     }
 
     /// Process external port commands
     async fn process_external_port_command(&self, command: external::PortCommand) {
         debug!("Processing external port command: {:#?}", command);
         match command.data {
-            external::PortCommandData::PortStatus => {
-                if let Err(e) = self.process_external_port_status(command.port).await {
-                    error!("Error processing external port status command: {:#?}", e);
-                }
-            }
+            external::PortCommandData::PortStatus => self.process_external_port_status(command.port).await,
         }
     }
 
