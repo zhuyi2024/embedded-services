@@ -219,7 +219,7 @@ impl<'a> Device<'a> {
 
     /// Check if this controller has the given port
     pub fn has_port(&self, port: GlobalPortId) -> bool {
-        self.ports.iter().any(|p| *p == port)
+        self.lookup_local_port(port).is_ok()
     }
 
     /// Covert a local port ID to a global port ID
@@ -229,6 +229,15 @@ impl<'a> Device<'a> {
         }
 
         Ok(self.ports[port.0 as usize])
+    }
+
+    /// Convert a global port ID to a local port ID
+    pub fn lookup_local_port(&self, port: GlobalPortId) -> Result<LocalPortId, PdError> {
+        self.ports
+            .iter()
+            .position(|p| *p == port)
+            .map(|p| LocalPortId(p as u8))
+            .ok_or(PdError::InvalidParams)
     }
 
     /// Wait for a command to be sent to this controller

@@ -6,8 +6,17 @@ use super::*;
 impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
     /// Handle a port command
     async fn process_port_command(&self, controller: &mut C, command: controller::PortCommand) {
+        let local_port = self.pd_controller.lookup_local_port(command.port);
+        if local_port.is_err() {
+            self.pd_controller
+                .send_response(controller::Response::Port(Err(PdError::InvalidPort)))
+                .await;
+            return;
+        }
+
+        let local_port = local_port.unwrap();
         let response = match command.data {
-            controller::PortCommandData::PortStatus => match controller.get_port_status(LocalPortId(0)).await {
+            controller::PortCommandData::PortStatus => match controller.get_port_status(local_port).await {
                 Ok(status) => Ok(controller::PortResponseData::PortStatus(status)),
                 Err(e) => match e {
                     Error::Bus(_) => Err(PdError::Failed),
