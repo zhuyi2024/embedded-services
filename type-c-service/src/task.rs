@@ -8,7 +8,7 @@ use embedded_services::{
         self,
         controller::PortStatus,
         event::PortEventFlags,
-        external::{self, ControllerCommandData, PortResponseData},
+        external::{self, ControllerCommandData},
         ControllerId,
     },
 };
@@ -143,15 +143,32 @@ impl Service {
         }
     }
 
+    /// Process external port status command
+    async fn process_external_port_status(&self, port_id: GlobalPortId) -> Result<(), Error> {
+        let status = self.context.get_port_status(port_id).await;
+        if let Err(e) = status {
+            error!("Error getting port status: {:#?}", e);
+        }
+
+        self.context
+            .send_external_response(external::Response::Port(
+                status.map(external::PortResponseData::PortStatus),
+            ))
+            .await;
+
+        Ok(())
+    }
+
     /// Process external port commands
     async fn process_external_port_command(&self, command: external::PortCommand) {
         debug!("Processing external port command: {:#?}", command);
-        // TODO: flesh this out
-        self.context
-            .send_external_response(external::Response::Port(Ok(PortResponseData::PortStatus(
-                Default::default(),
-            ))))
-            .await
+        match command.data {
+            external::PortCommandData::PortStatus => {
+                if let Err(e) = self.process_external_port_status(command.port).await {
+                    error!("Error processing external port status command: {:#?}", e);
+                }
+            }
+        }
     }
 
     /// Process external commands
