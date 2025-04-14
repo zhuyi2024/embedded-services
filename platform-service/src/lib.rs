@@ -3,25 +3,17 @@
 /// NVRAM platform service abstraction
 pub mod nvram;
 
+// CRC service abstraction
+pub mod embedded_crc;
+
 #[cfg(any(feature = "imxrt", feature = "imxrt685"))]
-pub(crate) mod imxrt;
+pub mod imxrt;
 
 #[cfg(any(feature = "imxrt", feature = "imxrt685"))]
 pub(crate) use imxrt::*;
 
 #[cfg(not(any(feature = "imxrt", feature = "imxrt685")))]
-mod defaults {
-    use core::ops::Range;
-
-    pub(crate) fn nvram_read(_address: usize) -> u32 {
-        0
-    }
-    pub(crate) fn nvram_write(_address: usize, _value: u32) {}
-
-    pub(crate) fn nvram_valid_range() -> Range<usize> {
-        0..0
-    }
-}
+pub(crate) mod defaults;
 
 #[cfg(not(any(feature = "imxrt", feature = "imxrt685")))]
 pub(crate) use defaults::*;

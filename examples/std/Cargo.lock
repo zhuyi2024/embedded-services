@@ -553,7 +553,7 @@ dependencies = [
  "embedded-io-async",
  "embedded-storage",
  "embedded-storage-async",
- "embedded-usb-pd 0.1.0 (git+https://github.com/OpenDevicePartnership/embedded-usb-pd)",
+ "embedded-usb-pd",
  "fixed",
  "heapless 0.8.0",
  "log",
@@ -1164,7 +1164,7 @@ dependencies = [
  "embedded-hal-async",
  "embedded-io-async",
  "embedded-services",
- "embedded-usb-pd 0.1.0 (git+https://github.com/OpenDevicePartnership/embedded-usb-pd)",
+ "embedded-usb-pd",
  "log",
  "tps6699x",
 ]
