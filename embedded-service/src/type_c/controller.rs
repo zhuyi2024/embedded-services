@@ -9,8 +9,10 @@ use embassy_sync::signal::Signal;
 use embassy_time::{with_timeout, Duration};
 use embedded_usb_pd::ucsi::lpm;
 use embedded_usb_pd::{
-    pdinfo::AltMode, type_c::ConnectionState, type_c::Current as TypecCurrent, Error, GlobalPortId, PdError,
-    PortId as LocalPortId, PowerRole,
+    pdinfo::{AltMode, PowerPathStatus},
+    type_c::ConnectionState,
+    type_c::Current as TypecCurrent,
+    Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole,
 };
 
 use super::event::{PortEventFlags, PortEventKind};
@@ -42,6 +44,8 @@ pub struct PortStatus {
     pub dual_power: bool,
     /// Active alt-modes
     pub alt_mode: AltMode,
+    /// Power path status
+    pub power_path: PowerPathStatus,
 }
 
 impl PortStatus {
@@ -54,6 +58,7 @@ impl PortStatus {
             connection_state: None,
             dual_power: false,
             alt_mode: AltMode::none(),
+            power_path: PowerPathStatus::none(),
         }
     }
 

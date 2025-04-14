@@ -3,8 +3,8 @@ use core::cell::{Cell, RefCell};
 use core::iter::zip;
 
 use ::tps6699x::registers::field_sets::IntEventBus1;
-use ::tps6699x::registers::PdCcPullUp;
-use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
+use ::tps6699x::registers::{PdCcPullUp, PpExtVbusSw, PpIntVbusSw};
+use ::tps6699x::{PORT0, PORT1, TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
 use bitfield::bitfield;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::RawMutex;
@@ -15,6 +15,7 @@ use embedded_services::type_c::controller::{self, Controller, ControllerStatus, 
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::ControllerId;
 use embedded_services::{debug, info, trace, type_c};
+use embedded_usb_pd::pdinfo::PowerPathStatus;
 use embedded_usb_pd::pdo::{sink, source, Common, Rdo};
 use embedded_usb_pd::type_c::Current as TypecCurrent;
 use embedded_usb_pd::{Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole};
@@ -128,6 +129,21 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
             let alt_mode = tps6699x.get_alt_mode_status(port).await?;
             debug!("Port{} alt mode: {:#?}", port.0, alt_mode);
             port_status.alt_mode = alt_mode;
+
+            // Update power path status
+            let power_path = tps6699x.get_power_path_status(port).await?;
+            port_status.power_path = match port {
+                PORT0 => PowerPathStatus::new(
+                    power_path.pa_ext_vbus_sw() == PpExtVbusSw::EnabledInput,
+                    power_path.pa_int_vbus_sw() == PpIntVbusSw::EnabledOutput,
+                ),
+                PORT1 => PowerPathStatus::new(
+                    power_path.pb_ext_vbus_sw() == PpExtVbusSw::EnabledInput,
+                    power_path.pb_int_vbus_sw() == PpIntVbusSw::EnabledOutput,
+                ),
+                _ => Err(PdError::InvalidPort)?,
+            };
+            debug!("Port{} power path: {:#?}", port.0, port_status.power_path);
         }
 
         self.port_status[port.0 as usize].set(port_status);
