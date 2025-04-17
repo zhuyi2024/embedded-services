@@ -164,6 +164,8 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
     let memory_map: &mut ec_type::structure::ECMemory =
         unsafe { &mut *(memory_map_buffer.as_mut_ptr() as *mut ec_type::structure::ECMemory) };
 
+    espi.wait_for_plat_reset().await;
+
     info!("Initializing memory map");
     memory_map.ver.major = ec_type::structure::EC_MEMMAP_VERSION.major;
     memory_map.ver.minor = ec_type::structure::EC_MEMMAP_VERSION.minor;
@@ -176,8 +178,6 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
         .unwrap();
 
     loop {
-        embassy_time::Timer::after_secs(10).await;
-
         let event = espi.wait_for_event().await;
         match event {
             Ok(espi::Event::Port0(port_event)) => {
@@ -204,6 +204,8 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
             }
             Ok(espi::Event::Port1(_)) => {
                 info!("eSPI Port 1");
+
+                espi.complete_port(1).await;
             }
             Ok(espi::Event::Port2(_port_event)) => {
                 info!("eSPI Port 2");

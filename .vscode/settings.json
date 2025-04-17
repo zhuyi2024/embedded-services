@@ -9,9 +9,9 @@
         "editor.formatOnSave": true
     },
     "rust-analyzer.check.allTargets": false,
-    "rust-analyzer.cargo.target": "thumbv8m.main-none-eabihf",
     "rust-analyzer.cargo.features": [],
     "rust-analyzer.linkedProjects": [
+        "Cargo.toml",
         "examples/rt633/Cargo.toml",
         "examples/rt685s-evk/Cargo.toml",
         "examples/std/Cargo.toml"
