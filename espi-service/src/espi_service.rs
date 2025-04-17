@@ -178,8 +178,6 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
         .unwrap();
 
     loop {
-        embassy_time::Timer::after_secs(10).await;
-
         let event = espi.wait_for_event().await;
         match event {
             Ok(espi::Event::Port0(port_event)) => {
