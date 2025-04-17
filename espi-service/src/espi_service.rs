@@ -164,6 +164,8 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
     let memory_map: &mut ec_type::structure::ECMemory =
         unsafe { &mut *(memory_map_buffer.as_mut_ptr() as *mut ec_type::structure::ECMemory) };
 
+    espi.wait_for_plat_reset().await;
+
     info!("Initializing memory map");
     memory_map.ver.major = ec_type::structure::EC_MEMMAP_VERSION.major;
     memory_map.ver.minor = ec_type::structure::EC_MEMMAP_VERSION.minor;
