@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+crc = "3.2.1"
 defmt = { workspace = true, optional = true }
 embassy-executor.workspace = true
 embassy-sync.workspace = true

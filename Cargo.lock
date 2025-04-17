@@ -254,6 +254,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc"
+version = "3.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69e6e4d7b33a94f0991c26729976b10ebde1d34c3ee82408fb536164fa10d636"
+dependencies = [
+ "crc-catalog",
+]
+
+[[package]]
+name = "crc-catalog"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19d374276b40fb8bbdee95aef7c7fa6b5316ec764510eb64b8dd0e2ed0d7e7f5"
+
+[[package]]
 name = "critical-section"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -407,7 +422,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "embassy-executor"
 version = "0.7.0"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -420,7 +435,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-macros"
 version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -431,7 +446,7 @@ dependencies = [
 [[package]]
 name = "embassy-futures"
 version = "0.1.1"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "defmt 0.3.100",
  "log",
@@ -440,7 +455,7 @@ dependencies = [
 [[package]]
 name = "embassy-hal-internal"
 version = "0.2.0"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -451,7 +466,7 @@ dependencies = [
 [[package]]
 name = "embassy-imxrt"
 version = "0.1.0"
-source = "git+https://github.com/OpenDevicePartnership/embassy-imxrt#ff0cc2e43d73078fb4bb2582127fdd9a57715b75"
+source = "git+https://github.com/OpenDevicePartnership/embassy-imxrt#3dfddf9c288c689b72bc143648a1a5a1adea0955"
 dependencies = [
  "cfg-if",
  "cortex-m",
@@ -484,7 +499,7 @@ dependencies = [
 [[package]]
 name = "embassy-sync"
 version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -499,7 +514,7 @@ dependencies = [
 [[package]]
 name = "embassy-time"
 version = "0.4.0"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -516,7 +531,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-driver"
 version = "0.2.0"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "document-features",
 ]
@@ -524,7 +539,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-queue-utils"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/embassy#2bb9c0f10dd66f3fcc058897ade0e60415067449"
+source = "git+https://github.com/embassy-rs/embassy#443ffd8b6df67844208ceec58d5443e01b99a159"
 dependencies = [
  "embassy-executor",
  "heapless 0.8.0",
@@ -650,7 +665,7 @@ dependencies = [
 [[package]]
 name = "embedded-services"
 version = "0.1.0"
-source = "git+https://github.com/OpenDevicePartnership/embedded-services#6db0fe8802dce587dfd0fdb41b4ae6ca0e3e7334"
+source = "git+https://github.com/OpenDevicePartnership/embedded-services#6a1f773dc4c323763ea288e6dabb38533158cf70"
 dependencies = [
  "bitfield 0.17.0",
  "bitflags 2.9.0",
@@ -990,6 +1005,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 name = "platform-service"
 version = "0.1.0"
 dependencies = [
+ "crc",
  "defmt 0.3.100",
  "embassy-executor",
  "embassy-imxrt",
@@ -1060,9 +1076,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a31971752e70b8b2686d7e46ec17fb38dad4051d94024c88df49b667caea9c84"
+checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
@@ -1183,7 +1199,7 @@ dependencies = [
 [[package]]
 name = "storage_bus"
 version = "0.1.1"
-source = "git+https://github.com/OpenDevicePartnership/embedded-services#6db0fe8802dce587dfd0fdb41b4ae6ca0e3e7334"
+source = "git+https://github.com/OpenDevicePartnership/embedded-services#6a1f773dc4c323763ea288e6dabb38533158cf70"
 dependencies = [
  "embassy-executor",
  "embassy-sync",
