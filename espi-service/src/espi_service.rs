@@ -206,6 +206,8 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
             }
             Ok(espi::Event::Port1(_)) => {
                 info!("eSPI Port 1");
+
+                espi.complete_port(1).await;
             }
             Ok(espi::Event::Port2(_port_event)) => {
                 info!("eSPI Port 2");
