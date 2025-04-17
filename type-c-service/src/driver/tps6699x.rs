@@ -3,17 +3,19 @@ use core::cell::{Cell, RefCell};
 use core::iter::zip;
 
 use ::tps6699x::registers::field_sets::IntEventBus1;
-use ::tps6699x::registers::{PdCcPullUp, PlugMode};
-use ::tps6699x::{TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
+use ::tps6699x::registers::{PdCcPullUp, PpExtVbusSw, PpIntVbusSw};
+use ::tps6699x::{PORT0, PORT1, TPS66993_NUM_PORTS, TPS66994_NUM_PORTS};
+use bitfield::bitfield;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embassy_sync::signal::Signal;
 use embedded_hal_async::i2c::I2c;
 use embedded_services::power::policy::{self, PowerCapability};
-use embedded_services::type_c::controller::{self, Controller, PortStatus};
+use embedded_services::type_c::controller::{self, Controller, ControllerStatus, PortStatus};
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::ControllerId;
 use embedded_services::{debug, info, trace, type_c};
+use embedded_usb_pd::pdinfo::PowerPathStatus;
 use embedded_usb_pd::pdo::{sink, source, Common, Rdo};
 use embedded_usb_pd::type_c::Current as TypecCurrent;
 use embedded_usb_pd::{Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole};
@@ -59,19 +61,12 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
         let mut port_status = PortStatus::default();
 
         let plug_present = status.plug_present();
-        let valid_connection = matches!(
-            status.connection_state(),
-            PlugMode::Audio | PlugMode::Debug | PlugMode::ConnectedNoRa | PlugMode::Connected
-        );
+        port_status.connection_state = status.connection_state().try_into().ok();
 
         debug!("Port{} Plug present: {}", port.0, plug_present);
-        debug!("Port{} Valid connection: {}", port.0, valid_connection);
+        debug!("Port{} Valid connection: {}", port.0, port_status.is_connected());
 
-        port_status.connection_present = plug_present && valid_connection;
-
-        if port_status.connection_present {
-            port_status.debug_connection = status.connection_state() == PlugMode::Debug;
-
+        if port_status.is_connected() {
             // Determine current contract if any
             let pdo_raw = tps6699x.get_active_pdo_contract(port).await?.active_pdo();
             info!("Raw PDO: {:#X}", pdo_raw);
@@ -129,6 +124,26 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
 
                 port_status.available_sink_contract = new_contract;
             }
+
+            // Update alt-mode status
+            let alt_mode = tps6699x.get_alt_mode_status(port).await?;
+            debug!("Port{} alt mode: {:#?}", port.0, alt_mode);
+            port_status.alt_mode = alt_mode;
+
+            // Update power path status
+            let power_path = tps6699x.get_power_path_status(port).await?;
+            port_status.power_path = match port {
+                PORT0 => PowerPathStatus::new(
+                    power_path.pa_ext_vbus_sw() == PpExtVbusSw::EnabledInput,
+                    power_path.pa_int_vbus_sw() == PpIntVbusSw::EnabledOutput,
+                ),
+                PORT1 => PowerPathStatus::new(
+                    power_path.pb_ext_vbus_sw() == PpExtVbusSw::EnabledInput,
+                    power_path.pb_int_vbus_sw() == PpIntVbusSw::EnabledOutput,
+                ),
+                _ => Err(PdError::InvalidPort)?,
+            };
+            debug!("Port{} power path: {:#?}", port.0, port_status.power_path);
         }
 
         self.port_status[port.0 as usize].set(port_status);
@@ -285,6 +300,21 @@ impl<const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'_, N, M, B> {
 
         tps6699x.set_port_control(port, control).await
     }
+
+    #[allow(clippy::await_holding_refcell_ref)]
+    async fn get_controller_status(&mut self) -> Result<ControllerStatus<'static>, Error<Self::BusError>> {
+        let mut tps6699x = self.tps6699x.borrow_mut();
+        let boot_flags = tps6699x.get_boot_flags().await?;
+        let customer_use = CustomerUse(tps6699x.get_customer_use().await?);
+
+        Ok(ControllerStatus {
+            mode: tps6699x.get_mode().await?.into(),
+            valid_fw_bank: (boot_flags.active_bank() == 0 && boot_flags.bank0_valid() != 0)
+                || (boot_flags.active_bank() == 1 && boot_flags.bank1_valid() != 0),
+            fw_version0: customer_use.ti_fw_version(),
+            fw_version1: customer_use.custom_fw_version(),
+        })
+    }
 }
 
 /// TPS66994 controller wrapper
@@ -327,4 +357,16 @@ pub fn tps66993<'a, M: RawMutex, B: I2c>(
         from_fn(|i| policy::device::Device::new(power_ids[i])),
         Tps6699x::new(controller),
     ))
+}
+
+bitfield! {
+    /// Custom customer use format
+    //#[derive(Clone, Copy)]
+    //#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    struct CustomerUse(u64);
+    impl Debug;
+    /// Custom FW version
+    pub u32, custom_fw_version, set_custom_fw_version: 31, 0;
+    /// TI FW version
+    pub u32, ti_fw_version, set_ti_fw_version: 63, 32;
 }

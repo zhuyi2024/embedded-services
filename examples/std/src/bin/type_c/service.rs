@@ -25,7 +25,7 @@ mod test_controller {
 
     use embassy_sync::{blocking_mutex::raw::NoopRawMutex, signal::Signal};
     use embedded_services::type_c::{
-        controller::{Contract, PortStatus},
+        controller::{Contract, ControllerStatus, PortStatus},
         event::PortEventKind,
     };
 
@@ -152,6 +152,16 @@ mod test_controller {
             debug!("Request PR swap: {:?}", _role);
             poll_fn(|_cx| {
                 return Poll::Ready(Ok(()));
+            })
+        }
+
+        async fn get_controller_status(&mut self) -> Result<ControllerStatus<'static>, Error<Self::BusError>> {
+            debug!("Get controller status");
+            Ok(ControllerStatus {
+                mode: "Test",
+                valid_fw_bank: true,
+                fw_version0: 0xbadf00d,
+                fw_version1: 0xdeadbeef,
             })
         }
     }

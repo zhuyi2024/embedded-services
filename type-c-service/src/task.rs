@@ -6,9 +6,10 @@ use embedded_services::{
     debug, error, info,
     type_c::{
         self,
-        controller::{ControllerStatus, PortStatus},
+        controller::PortStatus,
         event::PortEventFlags,
-        external::{self, PortResponseData},
+        external::{self, ControllerCommandData},
+        ControllerId,
     },
 };
 use embedded_usb_pd::GlobalPortId;
@@ -74,15 +75,15 @@ impl Service {
         debug!("Port{} Previous status: {:#?}", port_id.0, old_status);
         debug!("Port{} Status: {:#?}", port_id.0, status);
 
-        let connection_changed = status.connection_present != old_status.connection_present;
-        if connection_changed && (status.debug_connection || old_status.debug_connection) {
+        let connection_changed = status.is_connected() != old_status.is_connected();
+        if connection_changed && (status.is_debug_accessory() || old_status.is_debug_accessory()) {
             // Notify that a debug connection has connected/disconnected
             let msg = type_c::comms::DebugAccessoryMessage {
                 port: port_id,
-                connected: status.connection_present,
+                connected: status.is_connected(),
             };
 
-            if status.connection_present {
+            if status.is_connected() {
                 debug!("Port{}: Debug accessory connected", port_id.0);
             } else {
                 debug!("Port{}: Debug accessory disconnected", port_id.0);
@@ -114,29 +115,48 @@ impl Service {
         }
     }
 
+    /// Process external controller status command
+    async fn process_external_controller_status(&self, controller: ControllerId) {
+        let status = self.context.get_controller_status(controller).await;
+        if let Err(e) = status {
+            error!("Error getting controller status: {:#?}", e);
+        }
+
+        self.context
+            .send_external_response(external::Response::Controller(
+                status.map(external::ControllerResponseData::ControllerStatus),
+            ))
+            .await;
+    }
+
     /// Process external controller commands
     async fn process_external_controller_command(&self, command: external::ControllerCommand) {
         debug!("Processing external controller command: {:#?}", command);
-        // TODO: flesh this out
+        match command.data {
+            ControllerCommandData::ControllerStatus => self.process_external_controller_status(command.id).await,
+        }
+    }
+
+    /// Process external port status command
+    async fn process_external_port_status(&self, port_id: GlobalPortId) {
+        let status = self.context.get_port_status(port_id).await;
+        if let Err(e) = status {
+            error!("Error getting port status: {:#?}", e);
+        }
+
         self.context
-            .send_external_response(external::Response::Controller(Ok(
-                external::ControllerResponseData::ControllerStatus(ControllerStatus {
-                    mode: "Normal",
-                    valid_fw_bank: true,
-                }),
-            )))
-            .await
+            .send_external_response(external::Response::Port(
+                status.map(external::PortResponseData::PortStatus),
+            ))
+            .await;
     }
 
     /// Process external port commands
     async fn process_external_port_command(&self, command: external::PortCommand) {
         debug!("Processing external port command: {:#?}", command);
-        // TODO: flesh this out
-        self.context
-            .send_external_response(external::Response::Port(Ok(PortResponseData::PortStatus(
-                Default::default(),
-            ))))
-            .await
+        match command.data {
+            external::PortCommandData::PortStatus => self.process_external_port_status(command.port).await,
+        }
     }
 
     /// Process external commands

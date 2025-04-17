@@ -1,6 +1,13 @@
 
 # cargo-vet imports lock
 
+[[publisher.anyhow]]
+version = "1.0.98"
+when = "2025-04-14"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
 [[publisher.encoding_rs]]
 version = "0.8.35"
 when = "2024-10-24"

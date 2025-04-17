@@ -9,7 +9,10 @@ use embassy_sync::signal::Signal;
 use embassy_time::{with_timeout, Duration};
 use embedded_usb_pd::ucsi::lpm;
 use embedded_usb_pd::{
-    type_c::Current as TypecCurrent, Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole,
+    pdinfo::{AltMode, PowerPathStatus},
+    type_c::ConnectionState,
+    type_c::Current as TypecCurrent,
+    Error, GlobalPortId, PdError, PortId as LocalPortId, PowerRole,
 };
 
 use super::event::{PortEventFlags, PortEventKind};
@@ -35,12 +38,14 @@ pub struct PortStatus {
     pub available_source_contract: Option<policy::PowerCapability>,
     /// Current available sink contract
     pub available_sink_contract: Option<policy::PowerCapability>,
-    /// Connection present
-    pub connection_present: bool,
-    /// Debug connection
-    pub debug_connection: bool,
+    /// Current connection state
+    pub connection_state: Option<ConnectionState>,
     /// Port partner supports dual-power roles
     pub dual_power: bool,
+    /// Active alt-modes
+    pub alt_mode: AltMode,
+    /// Power path status
+    pub power_path: PowerPathStatus,
 }
 
 impl PortStatus {
@@ -50,10 +55,26 @@ impl PortStatus {
         Self {
             available_source_contract: None,
             available_sink_contract: None,
-            connection_present: false,
-            debug_connection: false,
+            connection_state: None,
             dual_power: false,
+            alt_mode: AltMode::none(),
+            power_path: PowerPathStatus::none(),
         }
+    }
+
+    /// Check if the port is connected
+    pub fn is_connected(&self) -> bool {
+        matches!(
+            self.connection_state,
+            Some(ConnectionState::Attached)
+                | Some(ConnectionState::DebugAccessory)
+                | Some(ConnectionState::AudioAccessory)
+        )
+    }
+
+    /// Check if a debug accessory is connected
+    pub fn is_debug_accessory(&self) -> bool {
+        matches!(self.connection_state, Some(ConnectionState::DebugAccessory))
     }
 }
 
@@ -163,6 +184,10 @@ pub struct ControllerStatus<'a> {
     pub mode: &'a str,
     /// True if we did not have to boot from a backup FW bank
     pub valid_fw_bank: bool,
+    /// FW version 0
+    pub fw_version0: u32,
+    /// FW version 1
+    pub fw_version1: u32,
 }
 
 /// PD controller
@@ -202,7 +227,7 @@ impl<'a> Device<'a> {
 
     /// Check if this controller has the given port
     pub fn has_port(&self, port: GlobalPortId) -> bool {
-        self.ports.iter().any(|p| *p == port)
+        self.lookup_local_port(port).is_ok()
     }
 
     /// Covert a local port ID to a global port ID
@@ -212,6 +237,15 @@ impl<'a> Device<'a> {
         }
 
         Ok(self.ports[port.0 as usize])
+    }
+
+    /// Convert a global port ID to a local port ID
+    pub fn lookup_local_port(&self, port: GlobalPortId) -> Result<LocalPortId, PdError> {
+        self.ports
+            .iter()
+            .position(|p| *p == port)
+            .map(|p| LocalPortId(p as u8))
+            .ok_or(PdError::InvalidParams)
     }
 
     /// Wait for a command to be sent to this controller
@@ -303,6 +337,10 @@ pub trait Controller {
         port: LocalPortId,
         role: PowerRole,
     ) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
+    /// Get current controller status
+    fn get_controller_status(
+        &mut self,
+    ) -> impl Future<Output = Result<ControllerStatus<'static>, Error<Self::BusError>>>;
 }
 
 /// Internal context for managing PD controllers
