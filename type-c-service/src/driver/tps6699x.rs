@@ -69,9 +69,9 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
         if port_status.is_connected() {
             // Determine current contract if any
             let pdo_raw = tps6699x.get_active_pdo_contract(port).await?.active_pdo();
-            info!("Raw PDO: {:#X}", pdo_raw);
+            trace!("Raw PDO: {:#X}", pdo_raw);
             let rdo_raw = tps6699x.get_active_rdo_contract(port).await?.active_rdo();
-            info!("Raw RDO: {:#X}", rdo_raw);
+            trace!("Raw RDO: {:#X}", rdo_raw);
 
             if pdo_raw != 0 && rdo_raw != 0 {
                 // Got a valid explicit contract
