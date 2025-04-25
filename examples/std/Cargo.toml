@@ -41,6 +41,8 @@ static_cell = "2"
 embedded-hal-async = "1.0.0"
 embedded-hal-mock = { version = "0.11.1", features = ["embedded-hal-async"] }
 
+critical-section = { version = "1.1", features = ["std"] }
+
 [[bin]]
 name = "type-c-basic"
 path = "src/bin/type_c/basic.rs"

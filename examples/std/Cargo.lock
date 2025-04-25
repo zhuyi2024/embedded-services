@@ -1083,6 +1083,7 @@ version = "0.1.0"
 dependencies = [
  "battery-service",
  "cfu-service",
+ "critical-section",
  "embassy-executor",
  "embassy-futures",
  "embassy-sync",
