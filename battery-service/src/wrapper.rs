@@ -9,14 +9,14 @@ use crate::{
 };
 
 /// Wrapper object to bind device to fuel gauge hardware driver.
-pub struct Wrapper<C: Controller> {
-    device: Device,
+pub struct Wrapper<'a, C: Controller> {
+    device: &'a Device,
     controller: RefCell<C>,
 }
 
-impl<C: Controller> Wrapper<C> {
+impl<'a, C: Controller> Wrapper<'a, C> {
     /// Create a new fuel gauge wrapper.
-    pub fn new(device: Device, controller: C) -> Self {
+    pub fn new(device: &'a Device, controller: C) -> Self {
         Self {
             device,
             controller: RefCell::new(controller),
@@ -32,11 +32,11 @@ impl<C: Controller> Wrapper<C> {
             match res {
                 embassy_futures::select::Either::First(event) => {
                     trace!("New fuel gauge hardware device event.");
-                    self.process_device_event(&mut controller, &self.device, event).await;
+                    self.process_device_event(&mut controller, self.device, event).await;
                 }
                 embassy_futures::select::Either::Second(cmd) => {
                     trace!("New fuel gauge state machine command.");
-                    self.process_context_command(&mut controller, &self.device, cmd).await;
+                    self.process_context_command(&mut controller, self.device, cmd).await;
                 }
             };
         }
@@ -60,10 +60,23 @@ impl<C: Controller> Wrapper<C> {
                     device.send_response(Err(crate::device::FuelGaugeError::BusError)).await;
                 }
             },
-            Command::Ping => todo!(),
+            Command::Ping => match controller.ping().await {
+                Ok(_) => {
+                    device
+                        .send_response(Ok(crate::device::InternalResponse::Complete))
+                        .await;
+                }
+                Err(_e) => {
+                    // TODO: Add specific error handling
+                    device.send_response(Err(crate::device::FuelGaugeError::BusError)).await;
+                }
+            },
             Command::UpdateStaticCache => match controller.get_static_data().await {
                 Ok(static_data) => {
                     device.set_static_battery_cache(static_data);
+                    device
+                        .send_response(Ok(crate::device::InternalResponse::Complete))
+                        .await;
                 }
                 Err(_e) => {
                     // TODO: Add specific error handling

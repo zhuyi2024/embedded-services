@@ -80,7 +80,7 @@ pub enum ContextError {
 }
 
 /// External battery service context response.
-type BatteryResponse = Result<ContextResponse, ContextError>;
+pub type BatteryResponse = Result<ContextResponse, ContextError>;
 
 /// External battery state machine event wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,7 +107,7 @@ impl Context {
             state: RefCell::new(State::NotPresent),
             battery_event: Channel::new(),
             battery_response: Channel::new(),
-            state_machine_timeout_ms: Duration::from_millis(10000),
+            state_machine_timeout_ms: Duration::from_secs(120),
         }
     }
 
@@ -118,32 +118,30 @@ impl Context {
 
     /// Main processing function.
     pub async fn process(&self, event: BatteryEvent) {
-        loop {
-            let res = with_timeout(self.get_state_machine_timeout(), self.do_state_machine(event)).await;
-            match res {
-                Ok(sm_res) => match sm_res {
-                    Ok(_) => {
-                        debug!("Battery state machine completed for event {:?}", event);
-                        self.battery_response.send(Ok(ContextResponse::Ack)).await;
-                    }
-                    Err(e) => {
-                        error!("Battery state machine completed but errored {:?}", event);
-                        self.battery_response.send(Err(ContextError::StateError(e))).await;
-                    }
-                },
-                Err(_) => {
-                    error!("Battery state machine timeout!");
-                    // Should be infalliable
-                    let _ = self
-                        .do_state_machine(BatteryEvent {
-                            event: BatteryEventInner::Timeout,
-                            device_id: event.device_id,
-                        })
-                        .await;
-                    self.battery_response.send(Err(ContextError::Timeout)).await;
+        let res = with_timeout(self.get_state_machine_timeout(), self.do_state_machine(event)).await;
+        match res {
+            Ok(sm_res) => match sm_res {
+                Ok(_) => {
+                    debug!("Battery state machine completed for event {:?}", event);
+                    self.battery_response.send(Ok(ContextResponse::Ack)).await;
                 }
-            };
-        }
+                Err(e) => {
+                    error!("Battery state machine completed but errored {:?}", event);
+                    self.battery_response.send(Err(ContextError::StateError(e))).await;
+                }
+            },
+            Err(_) => {
+                error!("Battery state machine timeout!");
+                // Should be infalliable
+                self.do_state_machine(BatteryEvent {
+                    event: BatteryEventInner::Timeout,
+                    device_id: event.device_id,
+                })
+                .await
+                .expect("Error type is Infallible");
+                self.battery_response.send(Err(ContextError::Timeout)).await;
+            }
+        };
     }
 
     /// Process and validate event before running state machine.
@@ -190,7 +188,6 @@ impl Context {
     /// Main battery service state machine
     #[allow(clippy::await_holding_refcell_ref)]
     async fn do_state_machine(&self, event: BatteryEvent) -> StateMachineResponse {
-        let mut continue_exec = false;
         let mut state = self.state.borrow_mut();
 
         // BatteryEventInner can transition state, or an invalid event can cause the state machine to return
@@ -200,6 +197,7 @@ impl Context {
         }
 
         loop {
+            let mut continue_exec = false;
             match *state {
                 State::NotPresent => {
                     info!("Initializing fuel gauge with ID {:?}", event.device_id);
@@ -296,7 +294,7 @@ impl Context {
         self.battery_event.send(event).await;
     }
 
-    async fn wait_response(&self) -> BatteryResponse {
+    pub async fn wait_response(&self) -> BatteryResponse {
         self.battery_response.receive().await
     }
 
@@ -332,7 +330,10 @@ impl Context {
 
         match with_timeout(device.get_timeout(), device.execute_command(command)).await {
             Ok(res) => Ok(res),
-            Err(_) => Err(ContextError::Timeout),
+            Err(_) => {
+                error!("Device timed out when executing command {:?}", command);
+                Err(ContextError::Timeout)
+            }
         }
     }
 }
