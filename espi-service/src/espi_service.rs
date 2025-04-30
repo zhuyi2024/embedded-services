@@ -1,5 +1,6 @@
 use core::cell::RefCell;
 use core::mem::offset_of;
+use core::slice;
 
 use embassy_sync::once_lock::OnceLock;
 use embedded_services::comms::{self, EndpointID, External, Internal};
@@ -202,10 +203,31 @@ pub async fn espi_service(mut espi: espi::Espi<'static>, memory_map_buffer: &'st
 
                 espi.complete_port(0).await;
             }
-            Ok(espi::Event::Port1(_)) => {
+            Ok(espi::Event::Port1(port_event)) => {
                 info!("eSPI Port 1");
 
-                espi.complete_port(1).await;
+                // Assume port1 is used for OOB messages and start from 0x2000_0200
+                // If this changes, we need to update the offset in the eSPI driver
+                let data = unsafe {
+                    let start_oob_data = 0x2000_0200 as *const u8 as *mut u8;
+                    let espi_oob_len = 0x200;
+
+                    slice::from_raw_parts_mut(start_oob_data, espi_oob_len)
+                };
+
+                if port_event.direction {
+                    #[cfg(feature = "defmt")]
+                    info!("OOB message: {:02X}", &data[0..port_event.length]);
+
+                    espi.complete_port(1).await;
+
+                    for i in 0..port_event.length {
+                        data[0x100 + i] = data[i];
+                    }
+                    espi.oob_read_start(1, port_event.length as u8);
+                } else {
+                    espi.complete_port(1).await;
+                }
             }
             Ok(espi::Event::Port2(_port_event)) => {
                 info!("eSPI Port 2");
