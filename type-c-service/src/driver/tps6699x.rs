@@ -251,7 +251,15 @@ impl<const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'_, N, M, B> {
     async fn enable_sink_path(&mut self, port: LocalPortId, enable: bool) -> Result<(), Error<Self::BusError>> {
         debug!("Port{} enable sink path: {}", port.0, enable);
         let mut tps6699x = self.tps6699x.borrow_mut();
-        tps6699x.enable_sink_path(port, enable).await
+        match tps6699x.enable_sink_path(port, enable).await {
+            // Temporary workaround for autofet rejection
+            // Tracking bug: https://github.com/OpenDevicePartnership/embedded-services/issues/268
+            Err(Error::Pd(PdError::Rejected)) | Err(Error::Pd(PdError::Timeout)) => {
+                info!("Port{} autofet rejection, ignored", port.0);
+                Ok(())
+            }
+            rest => rest,
+        }
     }
 
     #[allow(clippy::await_holding_refcell_ref)]
