@@ -129,6 +129,11 @@ impl IntrusiveList {
         );
         Ok(())
     }
+
+    /// Iterate over the list as if it were items of type `T`, skipping any nodes that are of a different type.
+    pub fn iter_only<T: NodeContainer>(&self) -> OnlyT<T> {
+        OnlyT::new(self.into_iter())
+    }
 }
 
 /// iterator wrapper type for IntrusiveNode
@@ -159,6 +164,32 @@ impl Iterator for IntrusiveIterator {
         }
 
         iter
+    }
+}
+
+/// Iterator wrapper type for [`IntrusiveList`] that returns only nodes of type `T`.
+pub struct OnlyT<'a, T> {
+    iter: core::iter::FilterMap<IntrusiveIterator, fn(&'static IntrusiveNode) -> Option<&'a T>>,
+    _marker: core::marker::PhantomData<&'a T>,
+}
+
+impl<'a, T: NodeContainer> OnlyT<'a, T> {
+    /// Create a new `OnlyTIter` from an `IntrusiveIterator`.
+    pub fn new(iter: IntrusiveIterator) -> Self {
+        Self {
+            iter: iter.filter_map(|node| node.data::<T>()),
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, T: NodeContainer> Iterator for OnlyT<'a, T> {
+    type Item = &'a T;
+
+    /// Advance the iterator and return the next node of type `T`.
+    /// If the next node is not of type `T`, it will be skipped.
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 
@@ -377,9 +408,7 @@ mod test {
     #[test]
     fn test_empty_list() {
         let list = IntrusiveList::new();
-        for _ in &list {
-            assert!(false);
-        }
+        assert_eq!(0, list.into_iter().count());
     }
 
     #[test]
@@ -423,10 +452,16 @@ mod test {
             let b: Option<&RegistrationB> = ra.data();
             assert!(b.is_none());
         }
+
+        assert_eq!(A.len(), list_a.iter_only::<RegistrationA>().count());
+        assert_eq!(0, list_a.iter_only::<RegistrationB>().count());
+        assert_eq!(0, list_b.iter_only::<RegistrationA>().count());
+        assert_eq!(B.len(), list_b.iter_only::<RegistrationB>().count());
     }
 
     #[test]
     fn test_multitype_list() {
+        // list with multiple types within it (same registration type)
         let list_a = IntrusiveList::new();
         static A: [OnceLock<ElementA>; 5] = [const { OnceLock::new() }; 5];
         static AB: [OnceLock<ElementAB>; 5] = [const { OnceLock::new() }; 5];
@@ -454,10 +489,15 @@ mod test {
             let a: &RegistrationA = ra.data().unwrap();
             a.test();
         }
+
+        // ensure filtered iterator works
+        assert_eq!(A.len() + AB.len(), list_a.iter_only::<RegistrationA>().count());
+        assert_eq!(0, list_a.iter_only::<RegistrationB>().count());
     }
 
     #[test]
     fn test_multi_list() {
+        // nodes in multiple lists
         let list_a = IntrusiveList::new();
         let list_b = IntrusiveList::new();
         static A: [OnceLock<ElementA>; 5] = [const { OnceLock::new() }; 5];
@@ -503,5 +543,55 @@ mod test {
             let b: &RegistrationB = rb.data().unwrap();
             b.test();
         }
+
+        assert_eq!(A.len() + AB.len(), list_a.iter_only::<RegistrationA>().count());
+        assert_eq!(0, list_a.iter_only::<RegistrationB>().count());
+
+        assert_eq!(0, list_b.iter_only::<RegistrationA>().count());
+        assert_eq!(B.len() + AB.len(), list_b.iter_only::<RegistrationB>().count());
+    }
+
+    #[test]
+    fn test_multi_registration_list() {
+        // list with multiple registration types
+        let list = IntrusiveList::new();
+        static A: [OnceLock<ElementA>; 5] = [const { OnceLock::new() }; 5];
+        static B: [OnceLock<ElementB>; 5] = [const { OnceLock::new() }; 5];
+
+        // initialize static blocks
+        for a in &A {
+            a.get_or_init(ElementA::new);
+        }
+
+        for b in &B {
+            b.get_or_init(ElementB::new);
+        }
+
+        // construct lists
+        // NOTE: `push` pushes to the front, so the order of the list will be [B..., A...]
+        embassy_futures::block_on(async {
+            for a in &A {
+                assert!(a.get().await.register(&list).is_ok());
+            }
+
+            for b in &B {
+                assert!(b.get().await.register(&list).is_ok());
+            }
+        });
+
+        // assert validity of lists
+        for ra in list.into_iter().skip(B.len()) {
+            let a: &RegistrationA = ra.data().unwrap();
+            a.test();
+        }
+
+        for rb in list.into_iter().take(B.len()) {
+            let b: &RegistrationB = rb.data().unwrap();
+            b.test();
+        }
+
+        assert_eq!(A.len() + B.len(), list.into_iter().count());
+        assert_eq!(A.len(), list.iter_only::<RegistrationA>().count());
+        assert_eq!(B.len(), list.iter_only::<RegistrationB>().count());
     }
 }
