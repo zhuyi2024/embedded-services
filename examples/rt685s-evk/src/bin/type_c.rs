@@ -119,7 +119,7 @@ async fn pd_controller_task(controller: &'static Wrapper<'static>) {
 
 #[embassy_executor::task]
 async fn interrupt_task(mut int_in: Input<'static>, mut interrupt: Interrupt<'static>) {
-    tps6699x::task::interrupt_task(&mut int_in, [&mut interrupt]).await;
+    tps6699x::task::interrupt_task(&mut int_in, &mut [&mut interrupt]).await;
 }
 
 #[embassy_executor::main]
