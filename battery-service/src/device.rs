@@ -5,12 +5,16 @@ use embassy_sync::channel::Channel;
 use embassy_time::Duration;
 use embedded_services::{Node, NodeContainer};
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Device errors.
 pub enum FuelGaugeError {
     Timeout,
     BusError,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Device commands.
 pub enum Command {
     Initialize,
@@ -19,6 +23,8 @@ pub enum Command {
     UpdateDynamicCache,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Device response.
 pub enum InternalResponse {
     Complete,
@@ -32,25 +38,25 @@ pub type Response = Result<InternalResponse, FuelGaugeError>;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct StaticBatteryMsgs {
     /// Manufacturer Name.
-    manufacturer_name: [u8; 21],
+    pub manufacturer_name: [u8; 21],
 
     /// Device Name.
-    device_name: [u8; 21],
+    pub device_name: [u8; 21],
 
     /// Device Chemistry.
-    device_chemistry: [u8; 5],
+    pub device_chemistry: [u8; 5],
 
     /// Design Capacity in mWh.
-    design_capacity_mwh: u32,
+    pub design_capacity_mwh: u32,
 
     /// Design Voltage in mV.
-    design_voltage_mv: u16,
+    pub design_voltage_mv: u16,
 
     /// Device Chemistry Id.
-    device_chemistry_id: [u8; 2],
+    pub device_chemistry_id: [u8; 2],
 
     /// Device Serial Number.
-    serial_num: [u8; 4],
+    pub serial_num: [u8; 4],
 }
 
 /// Standard dynamic battery data cache
@@ -58,52 +64,52 @@ pub struct StaticBatteryMsgs {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct DynamicBatteryMsgs {
     /// Battery Max Power in mW.
-    max_power_mw: u32,
+    pub max_power_mw: u32,
 
     /// Battery Sustained Power in mW.
-    sus_power_mw: u32,
+    pub sus_power_mw: u32,
 
     /// Full Charge Capacity in mWh.
-    full_charge_capacity_mwh: u32,
+    pub full_charge_capacity_mwh: u32,
 
     /// Remaining Capacity in mWh.
-    remaining_capacity_mwh: u32,
+    pub remaining_capacity_mwh: u32,
 
     /// Rsoc in %.
-    relative_soc_pct: u16,
+    pub relative_soc_pct: u16,
 
     /// Charge/Discharge Cycle Count.
-    cycle_count: u16,
+    pub cycle_count: u16,
 
     /// Battery Voltage in mV.
-    voltage_mv: u16,
+    pub voltage_mv: u16,
 
     /// Maximum Error in %.
-    max_error_pct: u16,
+    pub max_error_pct: u16,
 
     /// Battery Status (Standard Smart Battery Defined).
-    battery_status: u16,
+    pub battery_status: u16,
 
     /// Desired Charging Voltage in mV.
-    charging_voltage_mv: u16,
+    pub charging_voltage_mv: u16,
 
     /// Desired Charging Current in mA.
-    charging_current_ma: u16,
+    pub charging_current_ma: u16,
 
     /// Battery Temperature in dK.
-    battery_temp_dk: u16,
+    pub battery_temp_dk: u16,
 
     /// Battery Current in mA.
-    current_ma: i16,
+    pub current_ma: i16,
 
     /// Battery Avg Current.
-    average_current_ma: i16,
+    pub average_current_ma: i16,
 }
 
 /// Fuel gauge ID
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct DeviceId(u8);
+pub struct DeviceId(pub u8);
 
 /// Hardware agnostic device object to be registered with context.
 pub struct Device {
@@ -117,7 +123,19 @@ pub struct Device {
 }
 
 impl Device {
-    // Get device ID.
+    pub fn new(id: DeviceId) -> Self {
+        Self {
+            node: embedded_services::Node::uninit(),
+            id,
+            command: Channel::new(),
+            response: Channel::new(),
+            dynamic_battery_cache: Cell::default(),
+            static_battery_cache: Cell::default(),
+            timeout: Cell::new(Duration::from_secs(60)),
+        }
+    }
+
+    /// Get device ID.
     pub fn id(&self) -> DeviceId {
         self.id
     }

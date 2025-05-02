@@ -7,8 +7,8 @@ use crc::*;
 
 use {defmt_rtt as _, panic_probe as _};
 
-use platform_service::embedded_crc;
 use defmt::{error, info};
+use platform_service::embedded_crc;
 
 const DATA: &[u8] = b"123456789";
 
