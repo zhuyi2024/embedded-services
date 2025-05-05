@@ -3,8 +3,11 @@
 /// NVRAM platform service abstraction
 pub mod nvram;
 
-// CRC service abstraction
+/// CRC service abstraction
 pub mod embedded_crc;
+
+/// Initiate a delayed MCU Reset
+pub mod reset;
 
 #[cfg(any(feature = "imxrt", feature = "imxrt685"))]
 pub mod imxrt;

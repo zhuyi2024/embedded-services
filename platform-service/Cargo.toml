@@ -18,11 +18,13 @@ log = { workspace = true, optional = true }
 embassy-imxrt = { workspace = true, optional = true, features = [
     "unstable-pac",
 ] }
+cortex-m = { workspace = true, optional = true }
 
 [features]
 # TODO find method to unblock CI gate without requiring chip specification at library level
-imxrt = ["embassy-imxrt/mimxrt633s"]
-imxrt685 = ["embassy-imxrt/mimxrt685s"]
+imxrt = ["embassy-imxrt/mimxrt633s", "cortex-m"]
+imxrt685 = ["embassy-imxrt/mimxrt685s", "cortex-m"]
+cortex-m = ["dep:cortex-m"]
 
 defmt = [
     "dep:defmt",
