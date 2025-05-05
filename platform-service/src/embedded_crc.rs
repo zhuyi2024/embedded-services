@@ -1,24 +1,11 @@
 use crc::Algorithm;
-#[cfg(feature = "defmt")]
-use defmt::Format;
 
 pub struct EmbeddedCrc<W: crc::Width> {
     algorithm: &'static Algorithm<W>,
     current_crc: Option<W>,
 }
 
-#[cfg(feature = "defmt")]
-#[derive(Clone, Copy, Debug, Default, Format)]
-pub enum EmbeddedCrcError {
-    #[default]
-    CrcErrorUnknown,
-    CrcErrorWidth,
-    CrcErrorPolynomial,
-    CrcErrorXorOut,
-    CrcErrorMutexGet,
-}
-
-#[cfg(not(feature = "defmt"))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, Default)]
 pub enum EmbeddedCrcError {
     #[default]
