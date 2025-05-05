@@ -57,6 +57,7 @@ impl<IN: Wait, OUT: OutputPin> InterruptSignal<IN, OUT> {
         self.signal.signal(());
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn process(&self) {
         let mut int_in = self.int_in.borrow_mut();
         let mut int_out = self.int_out.borrow_mut();

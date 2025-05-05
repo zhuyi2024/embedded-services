@@ -55,6 +55,12 @@ impl<'a, T> Buffer<'a, T> {
         unsafe { self.buffer.as_mut().unwrap().len() }
     }
 
+    /// Returns `true`` if the buffer has a length of 0
+    // SAFETY: The buffer is always valid
+    pub fn is_empty(&self) -> bool {
+        unsafe { self.buffer.as_mut().unwrap().is_empty() }
+    }
+
     fn borrow(&self, mutable: bool) {
         let status = match (self.status.get(), mutable) {
             (Status::None, false) => Status::Immutable(1),

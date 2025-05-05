@@ -11,6 +11,7 @@ mod defmt {
     macro_rules! trace {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
+                let _ = ($s, $( &$x ),*);
                 ::defmt::trace!($s $(, $x)*);
             }
         };
@@ -22,6 +23,7 @@ mod defmt {
     macro_rules! debug {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
+                let _ = ($s, $( &$x ),*);
                 ::defmt::debug!($s $(, $x)*);
             }
         };
@@ -33,6 +35,7 @@ mod defmt {
     macro_rules! info {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
+                let _ = ($s, $( &$x ),*);
                 ::defmt::info!($s $(, $x)*);
             }
         };
@@ -44,6 +47,7 @@ mod defmt {
     macro_rules! warn {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
+                let _ = ($s, $( &$x ),*);
                 ::defmt::warn!($s $(, $x)*);
             }
         };
@@ -55,6 +59,7 @@ mod defmt {
     macro_rules! error {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
+                let _ = ($s, $( &$x ),*);
                 ::defmt::error!($s $(, $x)*);
             }
         };
@@ -128,7 +133,7 @@ mod none {
     macro_rules! trace {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
-                let _ = ($( & $x ),*);
+                let _ = ($s, $( &$x ),*);
             }
         };
     }
@@ -139,7 +144,7 @@ mod none {
     macro_rules! debug {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
-                let _ = ($( & $x ),*);
+                let _ = ($s, $( &$x ),*);
             }
         };
     }
@@ -150,7 +155,7 @@ mod none {
     macro_rules! info {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
-                let _ = ($( & $x ),*);
+                let _ = ($s, $( &$x ),*);
             }
         };
     }
@@ -161,7 +166,7 @@ mod none {
     macro_rules! warn {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
-                let _ = ($( & $x ),*);
+                let _ = ($s, $( &$x ),*);
             }
         };
     }
@@ -172,7 +177,7 @@ mod none {
     macro_rules! error {
         ($s:literal $(, $x:expr)* $(,)?) => {
             {
-                let _ = ($( & $x ),*);
+                let _ = ($s, $( &$x ),*);
             }
         };
     }

@@ -87,13 +87,13 @@ impl PowerPolicy {
                 if action.power_capability().await != target_power {
                     // Attempt to connect at new capability. Don't exit early if this fails so
                     // we can continue to attempt to connect other providers
-                    if let Err(_) = action.connect_provider(target_power).await {
+                    if action.connect_provider(target_power).await.is_err() {
                         error!(
                             "Device{}: Failed to connect provider, attempting to disconnect",
                             device.id().0
                         );
 
-                        if let Err(_) = action.disconnect().await {
+                        if action.disconnect().await.is_err() {
                             error!("Device{}: Failed to disconnect provider", device.id().0);
 
                             // Early exit if that's what we want
@@ -109,7 +109,7 @@ impl PowerPolicy {
             }
         }
 
-        return recovery;
+        recovery
     }
 
     /// Update the provider state of currently connected providers
@@ -167,6 +167,7 @@ impl PowerPolicy {
     }
 
     /// Wait for the next provider recovery attempt, returns true if we should call `attempt_provider_recovery`
+    #[allow(clippy::await_holding_refcell_ref)]
     pub(super) async fn wait_attempt_provider_recovery(&self) -> bool {
         self.recovery_ticker.borrow_mut().next().await;
         self.state.lock().await.current_provider_state.state == PowerState::Recovery
@@ -191,7 +192,7 @@ impl PowerPolicy {
                     .try_policy_action::<action::ConnectedProvider>(device.id())
                     .await
                 {
-                    if let Err(_) = action.disconnect().await {
+                    if action.disconnect().await.is_err() {
                         error!("Device {}: Failed to recover", device.id().0);
                         recovered = false;
                     }
