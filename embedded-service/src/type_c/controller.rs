@@ -219,6 +219,11 @@ impl<'a> Device<'a> {
         }
     }
 
+    /// Get the controller ID
+    pub fn id(&self) -> ControllerId {
+        self.id
+    }
+
     /// Send a command to this controller
     pub async fn send_command(&self, command: Command) -> Response {
         self.command.send(command).await;
@@ -302,6 +307,8 @@ pub trait Controller {
     /// Type of error returned by the bus
     type BusError;
 
+    /// Ensure software state is in sync with hardware state
+    fn sync_state(&mut self) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
     /// Returns ports with pending events
     fn wait_port_event(&mut self) -> impl Future<Output = Result<(), Error<Self::BusError>>>;
     /// Returns and clears current events for the given port

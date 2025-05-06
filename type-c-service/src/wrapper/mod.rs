@@ -8,7 +8,7 @@ use embedded_services::power::policy::device::StateKind;
 use embedded_services::power::policy::{self, action};
 use embedded_services::type_c::controller::{self, Controller, PortStatus};
 use embedded_services::type_c::event::{PortEventFlags, PortEventKind};
-use embedded_services::{error, info, intrusive_list, trace, warn};
+use embedded_services::{error, info, trace, warn};
 use embedded_usb_pd::{type_c::Current as TypecCurrent, Error, PdError, PortId as LocalPortId};
 
 mod pd;
@@ -40,6 +40,13 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
             controller: RefCell::new(controller),
             active_events: [const { Cell::new(PortEventKind::none()) }; N],
         }
+    }
+
+    /// Ensure the software state is in sync with the hardware state
+    #[allow(clippy::await_holding_refcell_ref)]
+    async fn sync_state(&self) -> Result<(), Error<C::BusError>> {
+        let mut controller = self.controller.borrow_mut();
+        controller.sync_state().await
     }
 
     /// Handle a plug event
@@ -211,11 +218,28 @@ impl<'a, const N: usize, C: Controller> ControllerWrapper<'a, N, C> {
     }
 
     /// Register all devices with their respective services
-    pub async fn register(&'static self) -> Result<(), intrusive_list::Error> {
+    pub async fn register(&'static self) -> Result<(), Error<C::BusError>> {
         for device in &self.power {
-            policy::register_device(device).await?
+            policy::register_device(device).await.map_err(|_| {
+                error!(
+                    "Controller{}: Failed to register power device {}",
+                    self.pd_controller.id().0,
+                    device.id().0
+                );
+                Error::Pd(PdError::Failed)
+            })?;
         }
 
-        controller::register_controller(&self.pd_controller).await
+        controller::register_controller(&self.pd_controller)
+            .await
+            .map_err(|_| {
+                error!(
+                    "Controller{}: Failed to register PD controller",
+                    self.pd_controller.id().0
+                );
+                Error::Pd(PdError::Failed)
+            })?;
+
+        self.sync_state().await
     }
 }

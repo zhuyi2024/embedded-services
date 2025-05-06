@@ -46,8 +46,8 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
         tps6699x: &mut tps6699x::Tps6699x<'a, M, B>,
         port: LocalPortId,
     ) -> Result<PortEventKind, Error<B::Error>> {
-        #[allow(unused_mut)]
         let mut events = PortEventKind::none();
+        let previous_status = self.port_status[port.0 as usize].get();
 
         let status = tps6699x.get_port_status(port).await?;
         trace!("Port{} status: {:#?}", port.0, status);
@@ -95,13 +95,6 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
                 let current = TypecCurrent::try_from(port_control.typec_current()).map_err(Error::Pd)?;
                 debug!("Port{} type-C source current: {:#?}", port.0, current);
                 let new_contract = Some(PowerCapability::from(current));
-
-                if new_contract != port_status.available_source_contract {
-                    debug!("New implicit contract as provider");
-                    // We don't get interrupts for implicit contracts so generate event manually
-                    events.set_new_power_contract_as_provider(true);
-                }
-
                 port_status.available_source_contract = new_contract;
             } else {
                 // Implicit sink contract
@@ -115,13 +108,6 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
                     debug!("Port{} type-C sink current: {:#?}", port.0, current);
                     Some(PowerCapability::from(current))
                 };
-
-                if new_contract.is_some() && new_contract != port_status.available_sink_contract {
-                    debug!("New implicit contract as consumer");
-                    // We don't get interrupts for implicit contracts so generate event manually
-                    events.set_new_power_contract_as_consumer(true);
-                }
-
                 port_status.available_sink_contract = new_contract;
             }
 
@@ -144,6 +130,20 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
                 _ => Err(PdError::InvalidPort)?,
             };
             debug!("Port{} power path: {:#?}", port.0, port_status.power_path);
+        }
+
+        if port_status.available_sink_contract.is_some()
+            && port_status.available_sink_contract != previous_status.available_sink_contract
+        {
+            debug!("Port{}: new sink contract", port.0);
+            events.set_new_power_contract_as_consumer(true);
+        }
+
+        if port_status.available_source_contract.is_some()
+            && port_status.available_source_contract != previous_status.available_source_contract
+        {
+            debug!("Port{}: new source contract", port.0);
+            events.set_new_power_contract_as_provider(true);
         }
 
         self.port_status[port.0 as usize].set(port_status);
@@ -186,7 +186,6 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
     }
 
     /// Signal an event on the given port
-    #[allow(dead_code)]
     fn signal_event(&self, port: LocalPortId, event: PortEventKind) {
         if port.0 >= self.port_events.len() as u8 {
             return;
@@ -201,6 +200,19 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
 
 impl<const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'_, N, M, B> {
     type BusError = B::Error;
+
+    /// Controller specific initialization
+    #[allow(clippy::await_holding_refcell_ref)]
+    async fn sync_state(&mut self) -> Result<(), Error<Self::BusError>> {
+        for i in 0..N {
+            let port = LocalPortId(i as u8);
+            let mut tps6699x = self.tps6699x.borrow_mut();
+            let event = self.update_port_status(&mut tps6699x, port).await?;
+            self.signal_event(port, event);
+        }
+
+        Ok(())
+    }
 
     /// Wait for an event on any port
     #[allow(clippy::await_holding_refcell_ref)]
