@@ -103,20 +103,21 @@ impl Descriptor {
             return Err(Error::InvalidData);
         }
 
-        let mut descriptor = Descriptor::default();
-        descriptor.w_hid_desc_length = u16::from_le_bytes([buf[0], buf[1]]);
-        descriptor.bcd_version = u16::from_le_bytes([buf[2], buf[3]]);
-        descriptor.w_report_desc_length = u16::from_le_bytes([buf[4], buf[5]]);
-        descriptor.w_report_desc_register = u16::from_le_bytes([buf[6], buf[7]]);
-        descriptor.w_input_register = u16::from_le_bytes([buf[8], buf[9]]);
-        descriptor.w_max_input_length = u16::from_le_bytes([buf[10], buf[11]]);
-        descriptor.w_output_register = u16::from_le_bytes([buf[12], buf[13]]);
-        descriptor.w_max_output_length = u16::from_le_bytes([buf[14], buf[15]]);
-        descriptor.w_command_register = u16::from_le_bytes([buf[16], buf[17]]);
-        descriptor.w_data_register = u16::from_le_bytes([buf[18], buf[19]]);
-        descriptor.w_vendor_id = u16::from_le_bytes([buf[20], buf[21]]);
-        descriptor.w_product_id = u16::from_le_bytes([buf[22], buf[23]]);
-        descriptor.w_version_id = u16::from_le_bytes([buf[24], buf[25]]);
+        let descriptor = Descriptor {
+            w_hid_desc_length: u16::from_le_bytes([buf[0], buf[1]]),
+            bcd_version: u16::from_le_bytes([buf[2], buf[3]]),
+            w_report_desc_length: u16::from_le_bytes([buf[4], buf[5]]),
+            w_report_desc_register: u16::from_le_bytes([buf[6], buf[7]]),
+            w_input_register: u16::from_le_bytes([buf[8], buf[9]]),
+            w_max_input_length: u16::from_le_bytes([buf[10], buf[11]]),
+            w_output_register: u16::from_le_bytes([buf[12], buf[13]]),
+            w_max_output_length: u16::from_le_bytes([buf[14], buf[15]]),
+            w_command_register: u16::from_le_bytes([buf[16], buf[17]]),
+            w_data_register: u16::from_le_bytes([buf[18], buf[19]]),
+            w_vendor_id: u16::from_le_bytes([buf[20], buf[21]]),
+            w_product_id: u16::from_le_bytes([buf[22], buf[23]]),
+            w_version_id: u16::from_le_bytes([buf[24], buf[25]]),
+        };
 
         Ok(descriptor)
     }

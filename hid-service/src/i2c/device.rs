@@ -27,6 +27,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         }
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn get_hid_descriptor(&self) -> Result<hid::Descriptor, Error<B::Error>> {
         if self.descriptor.get().is_some() {
             return Ok(self.descriptor.get().unwrap());
@@ -67,6 +68,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(self.buffer.reference().slice(0..len))
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn read_report_descriptor(&self) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
         info!("Sending report descriptor");
 
@@ -85,6 +87,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(self.buffer.reference().slice(0..len))
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn handle_input_report(&self) -> Result<SharedRef<'static, u8>, Error<B::Error>> {
         info!("Handling input report");
         let desc = self.get_hid_descriptor().await?;
@@ -102,6 +105,7 @@ impl<A: AddressMode + Copy, B: I2c<A>> Device<A, B> {
         Ok(self.buffer.reference().slice(0..desc.w_max_input_length as usize))
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn handle_command(
         &self,
         cmd: &hid::Command<'static>,

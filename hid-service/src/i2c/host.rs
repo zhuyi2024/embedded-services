@@ -41,6 +41,7 @@ impl<B: I2cSlaveAsync> Host<B> {
         }
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn read_bus(&self, timeout_ms: u64, buffer: &mut [u8]) -> Result<(), Error<B::Error>> {
         let mut bus = self.bus.borrow_mut();
         let result = with_timeout(Duration::from_millis(timeout_ms), bus.respond_to_write(buffer)).await;
@@ -57,6 +58,7 @@ impl<B: I2cSlaveAsync> Host<B> {
         Ok(())
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn write_bus(&self, timeout_ms: u64, buffer: &[u8]) -> Result<(), Error<B::Error>> {
         let mut bus = self.bus.borrow_mut();
         // Send response, timeout if the host doesn't read so we don't get stuck here
@@ -197,6 +199,7 @@ impl<B: I2cSlaveAsync> Host<B> {
     }
 
     /// Process a request from the host
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn wait_request(&self) -> Result<Access, Error<B::Error>> {
         // Wait for HID register address
         let mut bus = self.bus.borrow_mut();
@@ -223,6 +226,7 @@ impl<B: I2cSlaveAsync> Host<B> {
         }
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn send_response(&self) -> Result<(), Error<B::Error>> {
         if let Some(response) = self.response.wait().await {
             match response {

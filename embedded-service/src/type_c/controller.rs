@@ -426,7 +426,7 @@ impl ContextToken {
                     false
                 }
             })
-            .map_or(Err(PdError::InvalidController), Ok)?;
+            .ok_or(PdError::InvalidController)?;
 
         match node
             .data::<Device>()

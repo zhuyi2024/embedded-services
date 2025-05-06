@@ -141,7 +141,7 @@ pub struct IntrusiveIterator {
     current: Option<&'static IntrusiveNode>,
 }
 
-impl<'a> IntoIterator for &'a IntrusiveList {
+impl IntoIterator for &IntrusiveList {
     type IntoIter = IntrusiveIterator;
     type Item = &'static IntrusiveNode;
 
@@ -173,7 +173,7 @@ pub struct OnlyT<'a, T> {
     _marker: core::marker::PhantomData<&'a T>,
 }
 
-impl<'a, T: NodeContainer> OnlyT<'a, T> {
+impl<T: NodeContainer> OnlyT<'_, T> {
     /// Create a new `OnlyTIter` from an `IntrusiveIterator`.
     pub fn new(iter: IntrusiveIterator) -> Self {
         Self {

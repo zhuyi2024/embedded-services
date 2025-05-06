@@ -48,14 +48,12 @@ impl Service<'_> {
         }
 
         while length > 0 {
-            if offset >= offset_of!(ec_type::structure::ECMemory, ver)
-                && offset < offset_of!(ec_type::structure::ECMemory, ver) + size_of::<ec_type::structure::Version>()
-            {
-                // This is a read-only section. eSPI master should not write to it.
-                return Err(ec_type::Error::InvalidLocation);
-            } else if offset >= offset_of!(ec_type::structure::ECMemory, caps)
-                && offset
-                    < offset_of!(ec_type::structure::ECMemory, caps) + size_of::<ec_type::structure::Capabilities>()
+            if (offset >= offset_of!(ec_type::structure::ECMemory, ver)
+                && offset < offset_of!(ec_type::structure::ECMemory, ver) + size_of::<ec_type::structure::Version>())
+                || (offset >= offset_of!(ec_type::structure::ECMemory, caps)
+                    && offset
+                        < offset_of!(ec_type::structure::ECMemory, caps)
+                            + size_of::<ec_type::structure::Capabilities>())
             {
                 // This is a read-only section. eSPI master should not write to it.
                 return Err(ec_type::Error::InvalidLocation);

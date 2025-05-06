@@ -14,7 +14,7 @@ use embedded_services::power::policy::{self, PowerCapability};
 use embedded_services::type_c::controller::{self, Controller, ControllerStatus, PortStatus};
 use embedded_services::type_c::event::PortEventKind;
 use embedded_services::type_c::ControllerId;
-use embedded_services::{debug, info, trace, type_c};
+use embedded_services::{debug, trace, type_c};
 use embedded_usb_pd::pdinfo::PowerPathStatus;
 use embedded_usb_pd::pdo::{sink, source, Common, Rdo};
 use embedded_usb_pd::type_c::Current as TypecCurrent;
