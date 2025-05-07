@@ -111,6 +111,7 @@ impl PowerPolicy {
         {
             idle.connect_consumer(new_consumer.power_capability).await?;
             state.current_consumer_state = Some(new_consumer);
+            embassy_time::Timer::after_millis(800).await;
             for node in self.context.chargers().await {
                 let device = node.data::<ChargerDevice>().ok_or(Error::InvalidDevice)?;
                 device
