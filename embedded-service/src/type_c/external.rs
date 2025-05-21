@@ -117,6 +117,7 @@ pub async fn get_controller_port_status(controller: ControllerId, port: LocalPor
 }
 
 /// Get the status of the given controller
+#[allow(unreachable_patterns)]
 pub async fn get_controller_status(id: ControllerId) -> Result<ControllerStatus<'static>, PdError> {
     match execute_external_controller_command(Command::Controller(ControllerCommand {
         id,

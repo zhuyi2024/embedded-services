@@ -619,7 +619,7 @@ impl ContextToken {
     /// Get the retimer fw update status
     pub async fn get_rt_fw_update_status(&self, port: GlobalPortId) -> Result<bool, PdError> {
         match self
-            .send_port_command(port, PortCommandData::RetimerFwUpdateGetState, DEFAULT_TIMEOUT)
+            .send_port_command(port, PortCommandData::RetimerFwUpdateGetState)
             .await?
         {
             PortResponseData::RtFwUpdateStatus(status) => Ok(status),
@@ -630,7 +630,7 @@ impl ContextToken {
     /// Set the retimer fw update state
     pub async fn set_rt_fw_update_state(&self, port: GlobalPortId) -> Result<(), PdError> {
         match self
-            .send_port_command(port, PortCommandData::RetimerFwUpdateSetState, DEFAULT_TIMEOUT)
+            .send_port_command(port, PortCommandData::RetimerFwUpdateSetState)
             .await?
         {
             PortResponseData::Complete => Ok(()),
@@ -641,7 +641,7 @@ impl ContextToken {
     /// Clear the retimer fw update state
     pub async fn clear_rt_fw_update_state(&self, port: GlobalPortId) -> Result<(), PdError> {
         match self
-            .send_port_command(port, PortCommandData::RetimerFwUpdateClearState, DEFAULT_TIMEOUT)
+            .send_port_command(port, PortCommandData::RetimerFwUpdateClearState)
             .await?
         {
             PortResponseData::Complete => Ok(()),
