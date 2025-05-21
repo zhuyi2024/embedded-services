@@ -122,8 +122,6 @@ pub enum PortResponseData {
     ClearEvents(PortEventKind),
     /// Retimer Fw Update status
     RtFwUpdateStatus(bool),
-    /// Retimer Fw Update set state success with no error
-    RtFwUpdateSetState,
 }
 
 impl PortResponseData {
@@ -628,7 +626,7 @@ impl ContextToken {
             .send_port_command(port, PortCommandData::RetimerFwUpdateSetState, DEFAULT_TIMEOUT)
             .await?
         {
-            PortResponseData::RtFwUpdateSetState => Ok(()),
+            PortResponseData::Complete => Ok(()),
             _ => Err(PdError::InvalidResponse),
         }
     }
@@ -639,7 +637,7 @@ impl ContextToken {
             .send_port_command(port, PortCommandData::RetimerFwUpdateClearState, DEFAULT_TIMEOUT)
             .await?
         {
-            PortResponseData::RtFwUpdateSetState => Ok(()),
+            PortResponseData::Complete => Ok(()),
             _ => Err(PdError::InvalidResponse),
         }
     }

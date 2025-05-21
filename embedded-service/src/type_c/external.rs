@@ -66,14 +66,12 @@ pub struct PortCommand {
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PortResponseData {
+    /// Command completed with no error
+    Complete,
     /// Get port status
     PortStatus(PortStatus),
     /// Get retimer fw update status
     RetimerFwUpdateGetState(bool),
-    /// Set retimer fw update status
-    RetimerFwUpdateSetState,
-    /// Clear retimer fw update status
-    RetimerFwUpdateClearState,
 }
 
 /// Port-specific command response
@@ -169,7 +167,7 @@ pub async fn port_set_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdErr
     }))
     .await?
     {
-        PortResponseData::RetimerFwUpdateSetState => Ok(()),
+        PortResponseData::Complete => Ok(()),
         _ => Err(PdError::InvalidResponse),
     }
 }
@@ -183,7 +181,7 @@ pub async fn port_clear_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdE
     }))
     .await?
     {
-        PortResponseData::RetimerFwUpdateClearState => Ok(()),
+        PortResponseData::Complete => Ok(()),
         _ => Err(PdError::InvalidResponse),
     }
 }

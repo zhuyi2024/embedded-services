@@ -174,7 +174,7 @@ impl Service {
 
         self.context
             .send_external_response(external::Response::Port(
-                status.map(|_| external::PortResponseData::RetimerFwUpdateSetState),
+                status.map(|_| external::PortResponseData::Complete),
             ))
             .await;
     }
@@ -188,7 +188,7 @@ impl Service {
 
         self.context
             .send_external_response(external::Response::Port(
-                status.map(|_| external::PortResponseData::RetimerFwUpdateClearState),
+                status.map(|_| external::PortResponseData::Complete),
             ))
             .await;
     }

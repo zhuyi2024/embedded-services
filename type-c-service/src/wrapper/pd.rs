@@ -39,7 +39,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
             }
             controller::PortCommandData::RetimerFwUpdateSetState => {
                 match controller.set_rt_fw_update_state(local_port).await {
-                    Ok(status) => Ok(controller::PortResponseData::RtFwUpdateSetState),
+                    Ok(status) => Ok(controller::PortResponseData::Complete),
                     Err(e) => match e {
                         Error::Bus(_) => Err(PdError::Failed),
                         Error::Pd(e) => Err(e),
@@ -48,7 +48,7 @@ impl<const N: usize, C: Controller> ControllerWrapper<'_, N, C> {
             }
             controller::PortCommandData::RetimerFwUpdateClearState => {
                 match controller.clear_rt_fw_update_state(local_port).await {
-                    Ok(status) => Ok(controller::PortResponseData::RtFwUpdateSetState),
+                    Ok(status) => Ok(controller::PortResponseData::Complete),
                     Err(e) => match e {
                         Error::Bus(_) => Err(PdError::Failed),
                         Error::Pd(e) => Err(e),
