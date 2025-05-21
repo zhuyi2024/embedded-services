@@ -177,7 +177,7 @@ pub async fn port_set_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdErr
 pub async fn port_clear_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdError> {
     match execute_external_port_command(Command::Port(PortCommand {
         port,
-        data: PortCommandData::RetimerFwUpdateSetState,
+        data: PortCommandData::RetimerFwUpdateClearState,
     }))
     .await?
     {
