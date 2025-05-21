@@ -98,7 +98,6 @@ pub enum Response<'a> {
 }
 
 /// Get the status of the given port
-#[allow(unreachable_patterns)]
 pub async fn get_port_status(port: GlobalPortId) -> Result<PortStatus, PdError> {
     match execute_external_port_command(Command::Port(PortCommand {
         port,
@@ -118,7 +117,6 @@ pub async fn get_controller_port_status(controller: ControllerId, port: LocalPor
 }
 
 /// Get the status of the given controller
-#[allow(unreachable_patterns)]
 pub async fn get_controller_status(id: ControllerId) -> Result<ControllerStatus<'static>, PdError> {
     match execute_external_controller_command(Command::Controller(ControllerCommand {
         id,
@@ -145,7 +143,6 @@ pub async fn controller_port_to_global_id(
 }
 
 /// Get the retimer fw update status of the given port
-#[allow(unreachable_patterns)]
 pub async fn port_get_rt_fw_update_status(port: GlobalPortId) -> Result<bool, PdError> {
     match execute_external_port_command(Command::Port(PortCommand {
         port,
@@ -159,7 +156,6 @@ pub async fn port_get_rt_fw_update_status(port: GlobalPortId) -> Result<bool, Pd
 }
 
 /// Set the retimer fw update state of the given port
-#[allow(unreachable_patterns)]
 pub async fn port_set_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdError> {
     match execute_external_port_command(Command::Port(PortCommand {
         port,
