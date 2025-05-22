@@ -170,7 +170,6 @@ pub async fn port_set_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdErr
 }
 
 /// Clear the retimer fw update state of the given port
-#[allow(unreachable_patterns)]
 pub async fn port_clear_rt_fw_update_state(port: GlobalPortId) -> Result<(), PdError> {
     match execute_external_port_command(Command::Port(PortCommand {
         port,
