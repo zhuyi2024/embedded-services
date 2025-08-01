@@ -48,6 +48,8 @@ pub enum Event<'a> {
     PortStatusChanged(GlobalPortId, PortStatusChanged, PortStatus),
     /// PD alert
     PdAlert(GlobalPortId, Ado),
+    /// Other port notification
+    OtherPortNotification(GlobalPortId, PortNotificationSingle),
     /// External command
     ExternalCommand(deferred::Request<'a, GlobalRawMutex, external::Command, external::Response<'static>>),
 }
@@ -117,6 +119,25 @@ impl Service {
 
         self.set_cached_port_status(port_id, status).await?;
 
+        Ok(())
+    }
+
+    /// Process notification for a specific port
+    async fn process_port_notification(
+        &self,
+        port_id: GlobalPortId,
+        notification: PortNotificationSingle,
+    ) -> Result<(), Error> {
+        debug!("Port{}: Notification: {:#?}", port_id.0, notification);
+
+        // Notify that a port notification has occurred
+        let msg = type_c::comms::PortNotificationMessage {
+            port: port_id,
+            notification: notification,
+        };
+        if self.tp.send(EndpointID::Internal(Internal::Usbc), &msg).await.is_err() {
+            error!("Failed to send port notification message");
+        }
         Ok(())
     }
 
@@ -268,9 +289,9 @@ impl Service {
                                     }
                                 }
                                 _ => {
-                                    // Other notifications currently unimplemented
-                                    trace!("Unimplemented port notification: {:?}", notification);
-                                    continue;
+                                    // Other notifications
+                                    trace!("Other port notification: {:?}", notification);
+                                    return Ok(Event::OtherPortNotification(port_id, notification));
                                 }
                             },
                         }
@@ -296,6 +317,11 @@ impl Service {
                 // Port notifications currently don't have any processing logic
                 info!("Port{}: Got PD alert: {:?}", port.0, alert);
                 Ok(())
+            }
+            Event::OtherPortNotification(port, notification) => {
+                // Process other port notifications
+                info!("Port{}: Got other port notification: {:?}", port.0, notification);
+                self.process_port_notification(port, notification).await
             }
             Event::ExternalCommand(request) => {
                 trace!("Processing external command");
