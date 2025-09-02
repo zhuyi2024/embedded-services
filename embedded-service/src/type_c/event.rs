@@ -31,6 +31,8 @@ bitfield! {
     pub u8, alt_mode_entered, set_alt_mode_entered: 7, 7;
     /// PD hard reset
     pub u8, pd_hard_reset, set_pd_hard_reset: 8, 8;
+    /// Patch loaded
+    pub u8, patch_loaded, set_patch_loaded: 9, 9;
 }
 
 /// Port status change events
@@ -140,6 +142,16 @@ impl PortStatusChanged {
     /// Sets the PD hard reset event
     pub fn set_pd_hard_reset(&mut self, value: bool) {
         self.0.set_pd_hard_reset(value.into());
+    }
+
+    /// Returns true if Patch loaded event triggered
+    pub fn patch_loaded(self) -> bool {
+        self.0.patch_loaded() != 0
+    }
+
+    /// Sets the Patch loaded event
+    pub fn set_patch_loaded(&mut self, value: bool) {
+        self.0.set_patch_loaded(value.into());
     }
 }
 

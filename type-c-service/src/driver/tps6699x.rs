@@ -85,89 +85,94 @@ impl<'a, const N: usize, M: RawMutex, B: I2c> Tps6699x<'a, N, M, B> {
             {
                 let mut event = mutex.lock().await;
                 if interrupt.plug_event() {
-                    debug!("Event: Plug event");
+                    info!("Event: Plug event");
                     event.status.set_plug_inserted_or_removed(true);
                 }
                 if interrupt.source_caps_received() {
-                    debug!("Event: Source Caps received");
+                    info!("Event: Source Caps received");
                     event.status.set_source_caps_received(true);
                 }
 
                 if interrupt.sink_ready() {
-                    debug!("Event: Sink ready");
+                    info!("Event: Sink ready");
                     event.status.set_sink_ready(true);
                 }
 
                 if interrupt.new_consumer_contract() {
-                    debug!("Event: New contract as consumer, PD controller act as Sink");
+                    info!("Event: New contract as consumer, PD controller act as Sink");
                     // Port is consumer and power negotiation is complete
                     event.status.set_new_power_contract_as_consumer(true);
                 }
 
                 if interrupt.new_provider_contract() {
-                    debug!("Event: New contract as provider, PD controller act as source");
+                    info!("Event: New contract as provider, PD controller act as source");
                     // Port is provider and power negotiation is complete
                     event.status.set_new_power_contract_as_provider(true);
                 }
 
                 if interrupt.power_swap_completed() {
-                    debug!("Event: power swap completed");
+                    info!("Event: power swap completed");
                     event.status.set_power_swap_completed(true);
                 }
 
                 if interrupt.data_swap_completed() {
-                    debug!("Event: data swap completed");
+                    info!("Event: data swap completed");
                     event.status.set_data_swap_completed(true);
                 }
 
                 if interrupt.am_entered() {
-                    debug!("Event: alt mode entered");
+                    info!("Event: alt mode entered");
                     event.status.set_alt_mode_entered(true);
                 }
 
                 if interrupt.hard_reset() {
-                    debug!("Event: hard reset");
+                    info!("Event: hard reset");
                     event.status.set_pd_hard_reset(true);
                 }
 
                 if interrupt.crossbar_error() {
-                    debug!("Event: crossbar error");
+                    info!("Event: crossbar error");
                     event.notification.set_usb_mux_error_recovery(true);
                 }
 
                 if interrupt.usvid_mode_entered() {
-                    debug!("Event: user svid mode entered");
+                    info!("Event: user svid mode entered");
                     event.notification.set_custom_mode_entered(true);
                 }
 
                 if interrupt.usvid_mode_exited() {
-                    debug!("Event: usvid mode exited");
+                    info!("Event: user svid mode exited");
                     event.notification.set_custom_mode_exited(true);
                 }
 
                 if interrupt.usvid_attention_vdm_received() {
-                    debug!("Event: user svid attention vdm received");
+                    info!("Event: user svid attention vdm received");
                     event.notification.set_custom_mode_attention_received(true);
                 }
 
                 if interrupt.usvid_other_vdm_received() {
-                    debug!("Event: user svid other vdm received");
+                    info!("Event: user svid other vdm received");
                     event.notification.set_custom_mode_other_vdm_received(true);
                 }
 
                 if interrupt.discover_mode_completed() {
-                    debug!("Event: discover mode completed");
+                    info!("Event: discover mode completed");
                     event.notification.set_discover_mode_completed(true);
                 }
 
                 if interrupt.dp_sid_status_updated() {
-                    debug!("Event: dp sid status updated");
+                    info!("Event: dp sid status updated");
                     event.notification.set_dp_status_update(true);
                 }
 
                 if interrupt.alert_message_received() {
-                    debug!("Event: alert message received");
+                    info!("Event: alert message received");
                     event.notification.set_alert(true);
+                }
+
+                if interrupt.patch_loaded() {
+                    info!("Event: Patch loaded");
+                    event.status.set_patch_loaded(true);
                 }
             }
         }
@@ -251,7 +256,7 @@ impl<const N: usize, M: RawMutex, B: I2c> Controller for Tps6699x<'_, N, M, B> {
         let plug_present = status.plug_present();
         port_status.connection_state = status.connection_state().try_into().ok();
 
-        debug!("Port{} Plug present: {}", port.0, plug_present);
+        info!("Port{} Plug present: {}", port.0, plug_present);
         debug!("Port{} Valid connection: {}", port.0, port_status.is_connected());
 
         if port_status.is_connected() {

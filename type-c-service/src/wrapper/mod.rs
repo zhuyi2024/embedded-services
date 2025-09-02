@@ -161,16 +161,16 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
     async fn sync_state_internal(
         &self,
         controller: &mut C,
-        state: &mut InternalState<N>,
+        _state: &mut InternalState<N>,
     ) -> Result<(), Error<<C as Controller>::BusError>> {
         // Sync the controller state with the PD controller
         for port in 0..N {
-            let mut status_changed = state.port_states[port].sw_status_event;
+            //let mut status_changed = state.port_states[port].sw_status_event;
             let local_port = LocalPortId(port as u8);
             let status = controller.get_port_status(local_port).await?;
-            trace!("Port{} status: {:#?}", port, status);
+            info!("sync_state_internal on Port{} status: {:#?}", port, status);
 
-            let previous_status = state.port_states[port].status;
+            /*let previous_status = state.port_states[port].status;
 
             if previous_status.is_connected() != status.is_connected() {
                 status_changed.set_plug_inserted_or_removed(true);
@@ -189,7 +189,7 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
                 // Have a status changed event, notify
                 trace!("Port{} status changed: {:#?}", port, status);
                 self.sw_status_event.signal(());
-            }
+            }*/
         }
         Ok(())
     }
@@ -254,23 +254,37 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
             .lookup_global_port(local_port_id)
             .map_err(Error::Pd)?;
 
+        // todo: only need to get_port_status when plug_event/sink_ready/contract changed
         let status = controller.get_port_status(local_port_id).await?;
-        trace!("Port{} status: {:#?}", global_port_id.0, status);
+        info!(
+            "process_port_status_changed: Port{} status: {:#?}",
+            global_port_id.0, status
+        );
 
         let power = self.get_power_device(local_port_id).map_err(Error::Pd)?;
         trace!("Port{} status events: {:#?}", global_port_id.0, status_event);
         if status_event.plug_inserted_or_removed() {
             self.process_plug_event(controller, power, local_port_id, &status)
                 .await?;
+
+            /*state.port_states[local_port_id.0 as usize]
+            .sw_status_event
+            .set_plug_inserted_or_removed(false);*/
         }
 
         // Only notify power policy of a contract after Sink Ready event (always after explicit or implicit contract)
         if status_event.sink_ready() {
             self.process_new_consumer_contract(power, &status).await?;
+            /*state.port_states[local_port_id.0 as usize]
+            .sw_status_event
+            .set_sink_ready(false);*/
         }
 
         if status_event.new_power_contract_as_provider() {
             self.process_new_provider_contract(power, &status).await?;
+            /*state.port_states[local_port_id.0 as usize]
+            .sw_status_event
+            .set_new_power_contract_as_provider(false);*/
         }
 
         self.check_sink_ready_timeout(
@@ -281,6 +295,13 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
             status_event.sink_ready(),
         )
         .await?;
+
+        // clear the software status event now that we've processed
+        info!(
+            "process_port_status_changed: clear sw_status_event on Port{} status: {:#?}",
+            global_port_id.0, status
+        );
+        state.port_states[local_port_id.0 as usize].sw_status_event = PortStatusChanged::none();
 
         Ok(Output::PortStatusChanged(OutputPortStatusChanged {
             port: local_port_id,
@@ -298,18 +319,26 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
         status: PortStatus,
     ) -> Result<(), Error<<C as Controller>::BusError>> {
         let global_port_id = self.pd_controller.lookup_global_port(local_port).map_err(Error::Pd)?;
-
+        info!(
+            "finalize_port_status_change on port {}: event: {}",
+            local_port, status_event
+        );
         let port_index = local_port.0 as usize;
         let mut events = state.port_states[port_index].pending_events;
+        info!("port_states: pending_events: {}", events);
         events.status = events.status.union(status_event);
         state.port_states[port_index].pending_events = events;
         state.port_states[port_index].status = status;
+        info!(
+            "update port_states: pending_events: {}, status: {}",
+            state.port_states[port_index].pending_events, state.port_states[port_index].status
+        );
 
         if events != PortEvent::none() {
             let mut pending = PortPending::none();
             pending.pend_port(global_port_id.0 as usize);
             self.pd_controller.notify_ports(pending).await;
-            trace!("P{}: Notified service for events: {:#?}", global_port_id.0, events);
+            info!("P{}: Notified service for events: {:#?}", global_port_id.0, events);
         }
 
         Ok(())
@@ -439,7 +468,7 @@ impl<'a, const N: usize, C: Controller, BACK: Backing<'a>, V: FwOfferValidator> 
                 Either5::Fourth(event) => return Ok(Event::CfuEvent(event)),
                 Either5::Fifth(port) => {
                     // Sink ready timeout event
-                    debug!("Port{0}: Sink ready timeout", port.0);
+                    info!("Port{0}: Sink ready timeout", port.0);
                     self.state.lock().await.port_states[port.0 as usize].sink_ready_deadline = None;
                     let mut status_event = PortStatusChanged::none();
                     status_event.set_sink_ready(true);
